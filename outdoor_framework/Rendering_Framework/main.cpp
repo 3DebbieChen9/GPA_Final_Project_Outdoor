@@ -1,9 +1,14 @@
-#include "src\basic\SceneRenderer.h"
+﻿#include "src\basic\SceneRenderer.h"
 #include <GLFW\glfw3.h>
 #include "SceneSetting.h"
 
-#pragma comment (lib, "lib-vc2015\\glfw3.lib")
-#pragma comment (lib, "assimp\\assimp-vc140-mtd.lib")
+#include "assimp/scene.h"
+#include "assimp/cimport.h"
+#include "assimp/postprocess.h"
+#include "../externals/include/stb_image.h"
+
+#pragma comment (lib, "lib-vc2017\\glfw3.lib")
+#pragma comment (lib, "assimp\\assimp-vc141-mt.lib")
 
 int FRAME_WIDTH = 1024;
 int FRAME_HEIGHT = 768;
@@ -39,6 +44,174 @@ Terrain *m_terrain = nullptr;
 // the airplane's transformation has been handled
 glm::vec3 m_airplanePosition;
 glm::mat4 m_airplaneRotMat;
+
+struct Shape
+{
+	GLuint vao;
+	GLuint vbo_position;
+	GLuint vbo_normal;
+	GLuint vbo_texcoord;
+	GLuint ibo;
+	int drawCount;
+	int materialID;
+};
+
+struct Material
+{
+	GLuint diffuse_tex;
+	glm::vec4 ka;
+	glm::vec4 kd;
+	glm::vec4 ks;
+};
+
+// define a simple data structure for storing texture image raw data
+typedef struct TextureData
+{
+	TextureData() : width(0), height(0), data(0) {}
+	int width;
+	int height;
+	unsigned char* data;
+} TextureData;
+
+// load a png image and return a TextureData structure with raw data
+// not limited to png format. works with any image format that is RGBA-32bit
+TextureData loadImg(const char* path)
+{
+	TextureData texture;
+	int n;
+	stbi_set_flip_vertically_on_load(true);
+	stbi_uc *data = stbi_load(path, &texture.width, &texture.height, &n, 4);
+	if (data != NULL)
+	{
+		texture.data = new unsigned char[texture.width * texture.height * 4 * sizeof(unsigned char)];
+		memcpy(texture.data, data, texture.width * texture.height * 4 * sizeof(unsigned char));
+		stbi_image_free(data);
+	}
+	return texture;
+}
+
+vector<Shape> shapes;
+vector<Material> materials;
+
+#pragma region Airplane
+void airplaneModel_load() {
+	char* filepath = "..\\models\\airplane.obj";//..\\Assets\\sponza.obj
+	const aiScene* scene = aiImportFile(filepath, aiProcessPreset_TargetRealtime_MaxQuality);
+
+	for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
+	{
+
+		aiMaterial* material = scene->mMaterials[i];
+		Material Material;
+		aiString texturePath;
+		aiColor3D color;
+		if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) ==
+			aiReturn_SUCCESS)
+		{
+			// load width, height and data from texturePath.C_Str();
+			string p = "..\\models\\"; /*..\\Assets\\*/
+			texturePath = p + texturePath.C_Str();
+			cout << texturePath.C_Str() << endl;
+			TextureData tex = loadImg(texturePath.C_Str());
+			glGenTextures(1, &Material.diffuse_tex);
+			glBindTexture(GL_TEXTURE_2D, Material.diffuse_tex);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex.width, tex.height, 0,
+				GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		material->Get(AI_MATKEY_COLOR_AMBIENT, color);
+		Material.ka = glm::vec4(color.r, color.g, color.b, 1.0f);
+		material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+		Material.kd = glm::vec4(color.r, color.g, color.b, 1.0f);
+		material->Get(AI_MATKEY_COLOR_SPECULAR, color);
+		Material.ks = glm::vec4(color.r, color.g, color.b, 1.0f);
+		// save material�K
+		materials.push_back(Material);
+	}
+	for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+	{
+		aiMesh* mesh = scene->mMeshes[i];
+		Shape shape;
+		glGenVertexArrays(1, &shape.vao);
+		glBindVertexArray(shape.vao);
+		// create 3 vbos to hold data
+		vector<float> position;
+		vector<float> normal;
+		vector<float> texcoord;
+		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
+		{
+			// mesh->mVertices[v][0~2] => position
+			position.push_back(mesh->mVertices[v][0]);
+			position.push_back(mesh->mVertices[v][1]);
+			position.push_back(mesh->mVertices[v][2]);
+			// mesh->mTextureCoords[0][v][0~1] => texcoord
+			texcoord.push_back(mesh->mTextureCoords[0][v][0]);
+			texcoord.push_back(mesh->mTextureCoords[0][v][1]);
+			// mesh->mNormals[v][0~2] => normal
+			normal.push_back(mesh->mNormals[v][0]);
+			normal.push_back(mesh->mNormals[v][1]);
+			normal.push_back(mesh->mNormals[v][2]);
+		}
+		// create 1 ibo to hold data
+		vector<unsigned int> face;
+		for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
+		{
+			// mesh->mFaces[f].mIndices[0~2] => index
+			face.push_back(mesh->mFaces[f].mIndices[0]);
+			face.push_back(mesh->mFaces[f].mIndices[1]);
+			face.push_back(mesh->mFaces[f].mIndices[2]);
+		}
+		// glVertexAttribPointer / glEnableVertexArray calls�K
+
+		glGenBuffers(1, &shape.vbo_position);
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
+		glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &position[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+
+		glGenBuffers(1, &shape.vbo_texcoord);
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
+		glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 2 * sizeof(float), &texcoord[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(1);
+
+		glGenBuffers(1, &shape.vbo_normal);
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
+		glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &normal[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(2);
+
+		glGenBuffers(1, &shape.ibo);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->mNumFaces * 3 * sizeof(unsigned int), &face[0], GL_STATIC_DRAW);
+
+
+		shape.materialID = mesh->mMaterialIndex;
+		shape.drawCount = mesh->mNumFaces * 3;
+		// save shape
+		shapes.push_back(shape);
+
+		position.clear();
+		position.shrink_to_fit();
+		texcoord.clear();
+		texcoord.shrink_to_fit();
+		normal.clear();
+		normal.shrink_to_fit();
+		face.clear();
+		face.shrink_to_fit();
+	}
+
+	aiReleaseImport(scene);
+}
+
+void airplaneModel_program() {
+
+}
+#pragma endregion
+
+
+
+
 
 int main(){
 	glfwInit();
