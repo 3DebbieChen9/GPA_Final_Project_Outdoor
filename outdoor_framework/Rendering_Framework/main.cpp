@@ -6,9 +6,15 @@
 #include "assimp/cimport.h"
 #include "assimp/postprocess.h"
 #include "../externals/include/stb_image.h"
+#include "../externals/include/AntTweakBar/AntTweakBar.h"
+#include "../externals/include/FreeGLUT/freeglut.h"
 
 #pragma comment (lib, "lib-vc2017\\glfw3.lib")
 #pragma comment (lib, "assimp\\assimp-vc141-mt.lib")
+#pragma comment (lib, "freeglut.lib")
+#pragma comment (lib, "AntTweakBar.lib")
+#pragma comment (lib, "AntTweakBar64.lib")
+
 
 using namespace glm;
 using namespace std;
@@ -114,9 +120,6 @@ void freeShaderSource(char** srcp)
 	delete srcp;
 }
 #pragma endregion
-
-
-
 
 
 #pragma region Airplane
@@ -318,7 +321,40 @@ void airplane_init() {
 }
 #pragma endregion
 
+#pragma region GUI
+TwBar* bar;
 
+//void TW_CALL SSAO_Switch(void* clientData)
+//{
+//	ssaoEffect.ssaoSwitch = !ssaoEffect.ssaoSwitch;
+//
+//}
+void TW_CALL blinnPhongChange(void* clientData) {
+	m_airplane_PhongFlag = !m_airplane_PhongFlag;
+}
+
+void setupGUI() {
+	// Initialize AntTweakBar
+	//TwDefine(" GLOBAL fontscaling=2 ");
+#ifdef _MSC_VER
+	TwInit(TW_OPENGL, NULL);
+#else
+	TwInit(TW_OPENGL_CORE, NULL);
+#endif
+	//TwInit(TW_OPENGL, NULL);
+	//TwGLUTModifiersFunc(glutGetModifiers);
+	bar = TwNewBar("Properties");
+	TwDefine(" Properties size='300 220' ");
+	TwDefine(" Properties fontsize='3' color='0 0 0' alpha=180 ");
+
+	//TwAddButton(bar, "SSAO_SWITH", SSAO_Switch, NULL, " label='SSAO_SWITCH' ");
+	/*TwAddVarRW(bar, "LightPosition_x", TW_TYPE_FLOAT, &(light_position.x), "label='Light Position.x'");
+	TwAddVarRW(bar, "LightPosition_y", TW_TYPE_FLOAT, &(light_position.y), "label='Light Position.y'");
+	TwAddVarRW(bar, "LightPosition_z", TW_TYPE_FLOAT, &(light_position.z), "label='Light Position.z'");*/
+	TwAddButton(bar, "skybox", blinnPhongChange, NULL, " label='BlinnPhong' ");/*
+	TwAddButton(bar, "particle", particleChange, NULL, "label = 'Particle'");*/
+}
+#pragma endregion
 int main(){
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -416,7 +452,9 @@ void initializeGL(){
 	m_eye = glm::vec3(512.0, 10.0, 512.0);
 	m_lookAtCenter = glm::vec3(512.0, 0.0, 500.0);
 	
+	
 	initScene();
+	setupGUI();
 	airplane_init();
 
 	m_renderer->setProjection(glm::perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f));

@@ -1,28 +1,30 @@
 ﻿  main.cpp
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(362): warning C4305: '正在初始化': 從 'double' 轉換為 'float'，是由較大的類型轉換為較小的類型，可能導致資料遺失
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(370): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(510): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\program files (x86)\windows kits\10\include\10.0.19041.0\shared\minwindef.h(130): warning C4005: 'APIENTRY': 巨集重複定義
+  c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\externals\include\glad\glad.h(647): note: 請參閱 'APIENTRY' 之前的定義
+c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(398): warning C4305: '正在初始化': 從 'double' 轉換為 'float'，是由較大的類型轉換為較小的類型，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(406): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(548): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(511): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(549): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(516): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(554): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(517): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(555): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
   正在產生程式碼
-  6 of 1121 functions ( 0.5%) were compiled, the rest were copied from previous compilation.
+  2 of 1123 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
     1 functions had inline decision re-evaluated but remain unchanged
   已完成程式碼產生
