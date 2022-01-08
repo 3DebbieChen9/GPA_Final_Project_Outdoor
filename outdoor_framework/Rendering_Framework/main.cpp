@@ -205,7 +205,65 @@ void airplaneModel_load() {
 }
 
 void airplaneModel_program() {
+	program_map = glCreateProgram();
 
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+
+	char** vertexShaderSource = loadShaderSource("ground_vertex.vs.glsl");
+	char** fragmentShaderSource = loadShaderSource("ground_fragment.fs.glsl");
+
+	glShaderSource(vertexShader, 1, vertexShaderSource, NULL);
+	glShaderSource(fragmentShader, 1, fragmentShaderSource, NULL);
+
+	// Free the shader file string(won't be used any more)
+	freeShaderSource(vertexShaderSource);
+	freeShaderSource(fragmentShaderSource);
+
+	// Compile these shaders
+	glCompileShader(vertexShader);
+	glCompileShader(fragmentShader);
+
+	glAttachShader(program_map, vertexShader);
+	glAttachShader(program_map, fragmentShader);
+	glLinkProgram(program_map);
+
+	/*um4m_map = glGetUniformLocation(program_map, "um4m");
+	um4v_map = glGetUniformLocation(program_map, "um4v");
+	um4p_map = glGetUniformLocation(program_map, "um4p");
+	tex_map = glGetUniformLocation(program_map, "tex");
+	light_pos_map = glGetUniformLocation(program_map, "light_pos");
+	ambient_map = glGetUniformLocation(program_map, "ambient");
+	specular_map = glGetUniformLocation(program_map, "specular");
+	diffuse_map = glGetUniformLocation(program_map, "diffuse");
+	depthtest_map = glGetUniformLocation(program_map, "depth_test");
+	light_vp_map = glGetUniformLocation(program_map, "light_vp");
+	tex_map = glGetUniformLocation(program_map, "tex");
+	shadow_tex_map = glGetUniformLocation(program_map, "shadow_tex");*/
+}
+
+void airplaneModel_render() {
+	/*glUseProgram(program_map);
+	glUniformMatrix4fv(um4m_map, 1, GL_FALSE, value_ptr(model));
+	glUniformMatrix4fv(um4v_map, 1, GL_FALSE, value_ptr(light_view));
+	glUniformMatrix4fv(um4p_map, 1, GL_FALSE, value_ptr(light_proj));
+	glUniformMatrix4fv(light_vp_map, 1, GL_FALSE, value_ptr(scale_bias * light_proj * light_view));
+	glUniform3fv(light_pos_map, 1, value_ptr(light_position));
+	glUniform1i(depthtest_map, 0);
+	glActiveTexture(GL_TEXTURE0);
+	glUniform1i(tex_map, 0);
+	for (int i = 0; i < shapes.size(); i++) {
+		glBindVertexArray(shapes[i].vao);
+		int materialID = shapes[i].materialID;
+		glUniform3fv(ambient_map, 1, value_ptr(materials[materialID].ka));
+		glUniform3fv(specular_map, 1, value_ptr(materials[materialID].ks));
+		glUniform3fv(diffuse_map, 1, value_ptr(materials[materialID].kd));
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
+		glBindTexture(GL_TEXTURE_2D, materials[materialID].diffuse_tex);
+		glDrawElements(GL_TRIANGLES, shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+	}*/
 }
 #pragma endregion
 
