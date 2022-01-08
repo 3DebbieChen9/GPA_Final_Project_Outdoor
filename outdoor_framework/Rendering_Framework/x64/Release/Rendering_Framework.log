@@ -1,108 +1,29 @@
 ﻿  main.cpp
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(65): error C4430: 遺漏類型規範 - 假設為 int。注意: C++ 不支援 default-int
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(65): error C2143: 語法錯誤: 遺漏 ';' (在 '*' 之前)
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(65): error C2065: 'scene': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(65): error C2065: 'aiProcessPreset_TargetRealtime_MaxQuality': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(65): error C3861: 'aiImportFile': 找不到識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(67): error C2065: 'scene': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(69): error C2065: 'aiMaterial': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(69): error C2065: 'material': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(69): error C2065: 'scene': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(71): error C2065: 'aiString': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(71): error C2146: 語法錯誤: 遺漏 ';' (在識別項 'texturePath' 之前)
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(71): error C2065: 'texturePath': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(72): error C2065: 'aiColor3D': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(72): error C2146: 語法錯誤: 遺漏 ';' (在識別項 'color' 之前)
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(72): error C2065: 'color': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(73): error C2065: 'material': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(73): error C2065: 'aiTextureType_DIFFUSE': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(73): error C2065: 'texturePath': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(74): error C2065: 'aiReturn_SUCCESS': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(78): error C2065: 'texturePath': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(79): error C2065: 'texturePath': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(80): error C2065: 'TextureData': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(80): error C2146: 語法錯誤: 遺漏 ';' (在識別項 'tex' 之前)
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(80): error C2065: 'tex': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(80): error C2065: 'texturePath': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(80): error C3861: 'loadImage': 找不到識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(83): error C2065: 'tex': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(84): error C2065: 'tex': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(84): error C2198: 'PFNGLTEXIMAGE2DPROC': 呼叫的引數太少
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(87): error C2065: 'material': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(87): error C2065: 'AI_MATKEY_COLOR_AMBIENT': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(87): error C2065: 'color': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(88): error C2065: 'color': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(88): error C3861: 'vec4': 找不到識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(89): error C2065: 'material': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(89): error C2065: 'AI_MATKEY_COLOR_DIFFUSE': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(89): error C2065: 'color': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(90): error C2065: 'color': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(90): error C3861: 'vec4': 找不到識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(91): error C2065: 'material': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(91): error C2065: 'AI_MATKEY_COLOR_SPECULAR': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(91): error C2065: 'color': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(92): error C2065: 'color': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(92): error C3861: 'vec4': 找不到識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(94): error C2065: 'materials': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(96): error C2065: 'scene': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(98): error C2065: 'aiMesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(98): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(98): error C2065: 'scene': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(106): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(109): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(110): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(111): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(113): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(114): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(116): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(117): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(118): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(122): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(125): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(126): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(127): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(133): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(133): error C2198: 'PFNGLBUFFERDATAPROC': 呼叫的引數太少
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(139): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(139): error C2198: 'PFNGLBUFFERDATAPROC': 呼叫的引數太少
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(145): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(145): error C2198: 'PFNGLBUFFERDATAPROC': 呼叫的引數太少
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(151): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(151): error C2198: 'PFNGLBUFFERDATAPROC': 呼叫的引數太少
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(154): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(155): error C2065: 'mesh': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(157): error C2065: 'shapes': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(169): error C2065: 'scene': 未宣告的識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(169): error C3861: 'aiReleaseImport': 找不到識別項
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(214): warning C4305: '正在初始化': 從 'double' 轉換為 'float'，是由較大的類型轉換為較小的類型，可能導致資料遺失
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(222): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(347): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(362): warning C4305: '正在初始化': 從 'double' 轉換為 'float'，是由較大的類型轉換為較小的類型，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(370): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(510): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(348): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(511): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(353): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(516): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(354): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(517): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-  SceneSetting.cpp
-  SceneRenderer.cpp
-  Shader.cpp
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\src\basic\shader.cpp(73): warning C4101: 'data': 未參考的區域變數
-  TextureMaterial.cpp
-  Transformation.cpp
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\src\basic\transformation.cpp(71): warning C4267: '正在初始化': 將 'size_t' 轉換為 'int'，資料可能遺失
-  Terrain.cpp
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\src\terrain.cpp(9): warning C4244: '正在初始化': 將 'float' 轉換為 'int'，由於類型不同，可能導致資料遺失
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\src\terrain.cpp(72): warning C4312: '類型轉換': 將 'int' 轉換為較大的 'GLvoid *'
+  正在產生程式碼
+  6 of 1121 functions ( 0.5%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    1 functions had inline decision re-evaluated but remain unchanged
+  已完成程式碼產生
+  Rendering_Framework.vcxproj -> C:\Users\Debbie\Desktop\NTHU\GPA\GPA_Final\outdoor_framework\x64\Release\Rendering_Framework.exe

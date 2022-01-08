@@ -17,14 +17,14 @@ out VertexData
 
 void main()
 {
-	// TODO: Modify vertex shader
 	gl_Position = um4p * um4mv * vec4(iv3vertex, 1.0);
 	vertexData.texcoord = iv2tex_coord;
 
 	vec4 P = um4mv * vec4(iv3vertex, 1.0);
 	vec3 V = normalize(-P.xyz);
+	vec3 light_pos = vec3(0.2, 0.6, 0.5);
 
 	vertexData.N = normalize(mat3(um4mv) * iv3normal);
-	vertexData.L = normalize(vec3(1));
+	vertexData.L = normalize(light_pos - P.xyz);
 	vertexData.H = normalize(vertexData.L + V);
 }

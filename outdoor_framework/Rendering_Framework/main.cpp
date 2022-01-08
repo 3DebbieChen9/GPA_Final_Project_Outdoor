@@ -10,6 +10,9 @@
 #pragma comment (lib, "lib-vc2017\\glfw3.lib")
 #pragma comment (lib, "assimp\\assimp-vc141-mt.lib")
 
+using namespace glm;
+using namespace std;
+
 int FRAME_WIDTH = 1024;
 int FRAME_HEIGHT = 768;
 
@@ -64,6 +67,7 @@ struct Material
 	glm::vec4 ks;
 };
 
+#pragma region Default Loader
 // define a simple data structure for storing texture image raw data
 typedef struct TextureData
 {
@@ -90,17 +94,56 @@ TextureData loadImg(const char* path)
 	return texture;
 }
 
-vector<Shape> shapes;
-vector<Material> materials;
+char** loadShaderSource(const char* file)
+{
+	FILE* fp = fopen(file, "rb");
+	fseek(fp, 0, SEEK_END);
+	long sz = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	char *src = new char[sz + 1];
+	fread(src, sizeof(char), sz, fp);
+	src[sz] = '\0';
+	char **srcp = new char*[1];
+	srcp[0] = src;
+	return srcp;
+}
+
+void freeShaderSource(char** srcp)
+{
+	delete srcp[0];
+	delete srcp;
+}
+#pragma endregion
+
+
+
+
 
 #pragma region Airplane
-void airplaneModel_load() {
-	char* filepath = "..\\models\\airplane.obj";//..\\Assets\\sponza.obj
+
+vector<Shape> m_airplaneShapes;
+vector<Material> m_airplaneMaterials;
+GLuint m_airplaneProgram;
+GLuint m_airplane_um4mv;
+GLuint m_airplane_um4p;
+GLuint m_airplane_ubPhongFlag;
+GLuint m_airplane_texLoc;
+GLuint m_airplane_ambient;
+GLuint m_airplane_specular;
+GLuint m_airplane_diffuse;
+
+bool m_airplane_PhongFlag;
+float viewportAspect = (float)FRAME_WIDTH / (float)FRAME_HEIGHT;
+glm::mat4 m_airplane_projection = perspective(glm::radians(60.0f), viewportAspect, 0.1f, 1000.0f);
+glm::mat4 m_airplane_model;
+glm::mat4 m_airplane_view = lookAt(vec3(-10.0f, 5.0f, 0.0f), vec3(1.0f, 1.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
+
+void airplane_loadModel() {
+	char* filepath = ".\\models\\airplane.obj";//..\\Assets\\sponza.obj
 	const aiScene* scene = aiImportFile(filepath, aiProcessPreset_TargetRealtime_MaxQuality);
 
 	for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
 	{
-
 		aiMaterial* material = scene->mMaterials[i];
 		Material Material;
 		aiString texturePath;
@@ -109,15 +152,18 @@ void airplaneModel_load() {
 			aiReturn_SUCCESS)
 		{
 			// load width, height and data from texturePath.C_Str();
-			string p = "..\\models\\"; /*..\\Assets\\*/
+			string p = ".\\models\\"; /*..\\Assets\\*/
 			texturePath = p + texturePath.C_Str();
 			cout << texturePath.C_Str() << endl;
 			TextureData tex = loadImg(texturePath.C_Str());
 			glGenTextures(1, &Material.diffuse_tex);
 			glBindTexture(GL_TEXTURE_2D, Material.diffuse_tex);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex.width, tex.height, 0,
-				GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
 			glGenerateMipmap(GL_TEXTURE_2D);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		}
 		material->Get(AI_MATKEY_COLOR_AMBIENT, color);
 		Material.ka = glm::vec4(color.r, color.g, color.b, 1.0f);
@@ -125,8 +171,8 @@ void airplaneModel_load() {
 		Material.kd = glm::vec4(color.r, color.g, color.b, 1.0f);
 		material->Get(AI_MATKEY_COLOR_SPECULAR, color);
 		Material.ks = glm::vec4(color.r, color.g, color.b, 1.0f);
-		// save material�K
-		materials.push_back(Material);
+
+		m_airplaneMaterials.push_back(Material);
 	}
 	for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
 	{
@@ -185,11 +231,10 @@ void airplaneModel_load() {
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->mNumFaces * 3 * sizeof(unsigned int), &face[0], GL_STATIC_DRAW);
 
-
 		shape.materialID = mesh->mMaterialIndex;
 		shape.drawCount = mesh->mNumFaces * 3;
 		// save shape
-		shapes.push_back(shape);
+		m_airplaneShapes.push_back(shape);
 
 		position.clear();
 		position.shrink_to_fit();
@@ -204,14 +249,14 @@ void airplaneModel_load() {
 	aiReleaseImport(scene);
 }
 
-void airplaneModel_program() {
-	program_map = glCreateProgram();
+void airplane_program() {
+	m_airplaneProgram = glCreateProgram();
 
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
-	char** vertexShaderSource = loadShaderSource("ground_vertex.vs.glsl");
-	char** fragmentShaderSource = loadShaderSource("ground_fragment.fs.glsl");
+	char** vertexShaderSource = loadShaderSource(".\\assets\\airplane_vertex.vs.glsl");
+	char** fragmentShaderSource = loadShaderSource(".\\assets\\airplane_fragment.fs.glsl");
 
 	glShaderSource(vertexShader, 1, vertexShaderSource, NULL);
 	glShaderSource(fragmentShader, 1, fragmentShaderSource, NULL);
@@ -224,51 +269,54 @@ void airplaneModel_program() {
 	glCompileShader(vertexShader);
 	glCompileShader(fragmentShader);
 
-	glAttachShader(program_map, vertexShader);
-	glAttachShader(program_map, fragmentShader);
-	glLinkProgram(program_map);
+	glAttachShader(m_airplaneProgram, vertexShader);
+	glAttachShader(m_airplaneProgram, fragmentShader);
+	glLinkProgram(m_airplaneProgram);
 
-	/*um4m_map = glGetUniformLocation(program_map, "um4m");
-	um4v_map = glGetUniformLocation(program_map, "um4v");
-	um4p_map = glGetUniformLocation(program_map, "um4p");
-	tex_map = glGetUniformLocation(program_map, "tex");
-	light_pos_map = glGetUniformLocation(program_map, "light_pos");
-	ambient_map = glGetUniformLocation(program_map, "ambient");
-	specular_map = glGetUniformLocation(program_map, "specular");
-	diffuse_map = glGetUniformLocation(program_map, "diffuse");
-	depthtest_map = glGetUniformLocation(program_map, "depth_test");
-	light_vp_map = glGetUniformLocation(program_map, "light_vp");
-	tex_map = glGetUniformLocation(program_map, "tex");
-	shadow_tex_map = glGetUniformLocation(program_map, "shadow_tex");*/
+	m_airplane_um4mv = glGetUniformLocation(m_airplaneProgram, "um4mv");
+	m_airplane_um4p = glGetUniformLocation(m_airplaneProgram, "um4p");
+	m_airplane_um4mv = glGetUniformLocation(m_airplaneProgram, "um4mv");
+	m_airplane_ubPhongFlag = glGetUniformLocation(m_airplaneProgram, "ubPhongFlag");
+	m_airplane_texLoc = glGetUniformLocation(m_airplaneProgram, "tex");
+	m_airplane_ambient = glGetUniformLocation(m_airplaneProgram, "ambient");
+	m_airplane_specular = glGetUniformLocation(m_airplaneProgram, "specular");
+	m_airplane_diffuse = glGetUniformLocation(m_airplaneProgram, "diffuse");
 }
 
-void airplaneModel_render() {
-	/*glUseProgram(program_map);
-	glUniformMatrix4fv(um4m_map, 1, GL_FALSE, value_ptr(model));
-	glUniformMatrix4fv(um4v_map, 1, GL_FALSE, value_ptr(light_view));
-	glUniformMatrix4fv(um4p_map, 1, GL_FALSE, value_ptr(light_proj));
-	glUniformMatrix4fv(light_vp_map, 1, GL_FALSE, value_ptr(scale_bias * light_proj * light_view));
-	glUniform3fv(light_pos_map, 1, value_ptr(light_position));
-	glUniform1i(depthtest_map, 0);
-	glActiveTexture(GL_TEXTURE0);
-	glUniform1i(tex_map, 0);
-	for (int i = 0; i < shapes.size(); i++) {
-		glBindVertexArray(shapes[i].vao);
-		int materialID = shapes[i].materialID;
-		glUniform3fv(ambient_map, 1, value_ptr(materials[materialID].ka));
-		glUniform3fv(specular_map, 1, value_ptr(materials[materialID].ks));
-		glUniform3fv(diffuse_map, 1, value_ptr(materials[materialID].kd));
+void airplane_render() {
+	GLfloat move = 20.0;
+	m_airplane_model = glm::rotate(glm::mat4(1.0f), glm::radians(move), m_airplanePosition) * m_airplaneRotMat;
+	//m_airplane_model = translate(mat4(1.0f), m_airplanePosition) * m_airplaneRotMat;
+	glUseProgram(m_airplaneProgram);
+	glUniformMatrix4fv(m_airplane_um4mv, 1, GL_FALSE, glm::value_ptr(m_airplane_view * m_airplane_model));
+	glUniformMatrix4fv(m_airplane_um4p, 1, GL_FALSE, glm::value_ptr(m_airplane_projection));
+	glUniform1i(m_airplane_ubPhongFlag, m_airplane_PhongFlag);
+	glActiveTexture(GL_TEXTURE3);
+	glUniform1i(m_airplane_texLoc, 0);
+	for (int i = 0; i < m_airplaneShapes.size(); i++) {
+		glBindVertexArray(m_airplaneShapes[i].vao);
+		int materialID = m_airplaneShapes[i].materialID;
+		glUniform3fv(m_airplane_ambient, 1, value_ptr(m_airplaneMaterials[materialID].ka));
+		glUniform3fv(m_airplane_specular, 1, value_ptr(m_airplaneMaterials[materialID].ks));
+		glUniform3fv(m_airplane_diffuse, 1, value_ptr(m_airplaneMaterials[materialID].kd));
 		glEnableVertexAttribArray(0);
 		glEnableVertexAttribArray(1);
 		glEnableVertexAttribArray(2);
-		glBindTexture(GL_TEXTURE_2D, materials[materialID].diffuse_tex);
-		glDrawElements(GL_TRIANGLES, shapes[i].drawCount, GL_UNSIGNED_INT, 0);
-	}*/
+		glBindTexture(GL_TEXTURE_2D, m_airplaneMaterials[materialID].diffuse_tex);
+		glDrawElements(GL_TRIANGLES, m_airplaneShapes[i].drawCount, GL_UNSIGNED_INT, 0);
+	}
+	glBindVertexArray(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glUseProgram(0);
+	
+}
+
+void airplane_init() {
+	airplane_loadModel();
+	airplane_program();
+	m_airplane_PhongFlag = true;
 }
 #pragma endregion
-
-
-
 
 
 int main(){
@@ -292,8 +340,6 @@ int main(){
 		std::cout << "Failed to initialize GLAD" << std::endl;
 		return -1;
 	}
-
-	
 
 	glfwSetKeyCallback(window, keyCallback);
 	glfwSetScrollCallback(window, mouseScrollCallback);
@@ -371,6 +417,7 @@ void initializeGL(){
 	m_lookAtCenter = glm::vec3(512.0, 0.0, 500.0);
 	
 	initScene();
+	airplane_init();
 
 	m_renderer->setProjection(glm::perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f));
 }
@@ -380,7 +427,6 @@ void resizeGL(GLFWwindow *window, int w, int h){
 	m_renderer->resize(w, h);
 	m_renderer->setProjection(glm::perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f));
 }
-
 
 void updateState(){	
 	// [TODO] update your eye position and look-at center here
@@ -406,6 +452,7 @@ void paintGL(){
 	m_renderer->renderPass();
 
 	// [TODO] implement your rendering function here
+	airplane_render();
 }
 
 ////////////////////////////////////////////////
@@ -415,7 +462,21 @@ void cursorPosCallback(GLFWwindow* window, double x, double y){
 	cursorPos[0] = x;
 	cursorPos[1] = y;
 }
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods){}
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods){
+	printf("\nKey %d is pressed ", key);
+	switch (key)
+	{
+	case GLFW_KEY_A:
+		m_airplane_PhongFlag = !m_airplane_PhongFlag;
+		if (m_airplane_PhongFlag) {
+			cout << "True" << endl;
+		}
+		else {
+			cout << "False" << endl;
+		}
+		break;
+	}
+}
 ////////////////////////////////////////////////
 // The following functions don't need to change
 void initScene() {
