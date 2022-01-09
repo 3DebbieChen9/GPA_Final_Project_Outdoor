@@ -41,6 +41,8 @@
   <ItemGroup>
     <None Include="assets\airplane_fragment.fs.glsl" />
     <None Include="assets\airplane_vertex.vs.glsl" />
+    <None Include="assets\windowFrame_fragment.fs.glsl" />
+    <None Include="assets\windowFrame_vertex.vs.glsl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{ADA5FF44-3FBE-44D5-94ED-FFD82E3DF373}</ProjectGuid>
