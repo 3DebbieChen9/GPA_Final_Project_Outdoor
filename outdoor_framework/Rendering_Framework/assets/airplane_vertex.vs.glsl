@@ -12,6 +12,7 @@ out VertexData
     vec3 N; // eye space normal
     vec3 L; // eye space light vector
     vec3 H; // eye space halfway vector
+	vec3 normal;
     vec2 texcoord;
 } vertexData;
 
@@ -19,6 +20,7 @@ void main()
 {
 	gl_Position = um4p * um4mv * vec4(iv3vertex, 1.0);
 	vertexData.texcoord = iv2tex_coord;
+	vertexData.normal = iv3normal;
 
 	vec4 P = um4mv * vec4(iv3vertex, 1.0);
 	vec3 V = normalize(-P.xyz);
@@ -26,5 +28,5 @@ void main()
 
 	vertexData.N = normalize(mat3(um4mv) * iv3normal);
 	vertexData.L = normalize(light_pos - P.xyz);
-	vertexData.H = normalize(vertexData.L + V);
+	vertexData.H = normalize(vertexData.L + V);	
 }

@@ -291,6 +291,7 @@ void airplane_render() {
 	m_airplane_model = glm::rotate(glm::mat4(1.0f), glm::radians(move), m_airplanePosition) * m_airplaneRotMat;
 	//m_airplane_model = translate(mat4(1.0f), m_airplanePosition) * m_airplaneRotMat;
 	glUseProgram(m_airplaneProgram);
+	cout << "m_airplaneProgram " << m_airplaneProgram << endl;
 	glUniformMatrix4fv(m_airplane_um4mv, 1, GL_FALSE, glm::value_ptr(m_airplane_view * m_airplane_model));
 	glUniformMatrix4fv(m_airplane_um4p, 1, GL_FALSE, glm::value_ptr(m_airplane_projection));
 	glUniform1i(m_airplane_ubPhongFlag, m_airplane_PhongFlag);
@@ -341,7 +342,6 @@ void setupGUI() {
 #else
 	TwInit(TW_OPENGL_CORE, NULL);
 #endif
-	//TwInit(TW_OPENGL, NULL);
 	//TwGLUTModifiersFunc(glutGetModifiers);
 	bar = TwNewBar("Properties");
 	TwDefine(" Properties size='300 220' ");
@@ -351,7 +351,7 @@ void setupGUI() {
 	/*TwAddVarRW(bar, "LightPosition_x", TW_TYPE_FLOAT, &(light_position.x), "label='Light Position.x'");
 	TwAddVarRW(bar, "LightPosition_y", TW_TYPE_FLOAT, &(light_position.y), "label='Light Position.y'");
 	TwAddVarRW(bar, "LightPosition_z", TW_TYPE_FLOAT, &(light_position.z), "label='Light Position.z'");*/
-	TwAddButton(bar, "skybox", blinnPhongChange, NULL, " label='BlinnPhong' ");/*
+	TwAddButton(bar, "BlinnPhong", blinnPhongChange, NULL, " label='BlinnPhong' ");/*
 	TwAddButton(bar, "particle", particleChange, NULL, "label = 'Particle'");*/
 }
 #pragma endregion
@@ -454,7 +454,7 @@ void initializeGL(){
 	
 	
 	initScene();
-	setupGUI();
+	//setupGUI();
 	airplane_init();
 
 	m_renderer->setProjection(glm::perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f));
@@ -490,7 +490,11 @@ void paintGL(){
 	m_renderer->renderPass();
 
 	// [TODO] implement your rendering function here
+
 	airplane_render();
+	
+	//TwDraw();
+	//glutSwapBuffers();
 }
 
 ////////////////////////////////////////////////
