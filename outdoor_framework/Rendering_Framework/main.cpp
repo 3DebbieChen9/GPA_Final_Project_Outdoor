@@ -35,15 +35,26 @@ void adjustCameraPositionWithTerrain();
 void updateAirplane(const glm::mat4 &viewMatrix);
 void initScene();
 
-////void My_Resize(int width, int height);
-
 bool m_leftButtonPressed = false;
+bool m_leftButtonPressedFlag = false;
 bool m_rightButtonPressed = false;
+
 double cursorPos[2];
 
 SceneRenderer *m_renderer = nullptr;
-glm::vec3 m_lookAtCenter;
-glm::vec3 m_eye;
+glm::vec3 m_lookAtCenter = vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 m_eye = vec3(0.0f, 0.0f, 0.0f); // Eye Position / Camera Position
+#pragma region Trackball
+vec3 m_lookDirection = vec3(-1.0f, -1.0f, 0.0f);
+vec3 m_upDirection = vec3(0.0f, 1.0f, 0.0f);
+vec3 m_uAxis = vec3(1.0f, 0.0f, 0.0f);
+vec3 m_vAxis = vec3(0.0f, 1.0f, 0.0f);
+float m_cameraMoveSpeed = 2.0f;//0.05f;
+vec2 m_trackball_initial = vec2(0, 0);
+vec2 m_oldDistance = vec2(0, 0);
+vec2 m_rotateAngle = vec2(0.0f, 0.0f);
+#pragma endregion
+
 
 
 void vsyncEnabled(GLFWwindow *window);
@@ -122,8 +133,6 @@ void freeShaderSource(char** srcp)
 	delete srcp;
 }
 #pragma endregion
-
-GLuint TEST_TEXTURE;
 
 #pragma region Light Source
 mat4 lightView(1.0f);
@@ -327,9 +336,9 @@ public:
 		
 		aiReleaseImport(scene);
 
-		this->matrix.model = translate(mat4(1.0f), m_airplanePosition);
-		//GLfloat move = 20.0;
-		//this->matrix.model = rotate(mat4(1.0f), radians(move), m_airplanePosition);
+		//this->matrix.model = translate(mat4(1.0f), m_airplanePosition);
+		GLfloat move = 20.0;
+		this->matrix.model = rotate(mat4(1.0f), radians(move), m_airplanePosition);
 		this->matrix.rotate = m_airplaneRotMat;
 		cout << "Load airplane.obj" << endl;
 	}
@@ -337,8 +346,8 @@ public:
 	void passUniformData(int blinnPhongFlag) {
 		// vs
 		glUniformMatrix4fv(this->uniformID.um4m, 1, GL_FALSE, value_ptr(this->matrix.model));
-		//glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(vec3(-10.0f, 5.0f, 0.0f), vec3(1.0f, 1.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f))));
-		glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(m_eye, m_lookAtCenter, glm::vec3(0.0, 1.0, 0.0))));
+		glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(vec3(-10.0f, 5.0f, 0.0f), vec3(1.0f, 1.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f))));
+		//glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(m_eye, m_lookAtCenter, glm::vec3(0.0, 1.0, 0.0))));
 		glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(cameraProjection));
 		glUniformMatrix4fv(this->uniformID.um4Lightmpv, 1, GL_FALSE, value_ptr(scale_bias_matrix * lightProjection * lightView * this->matrix.model * this->matrix.scale * this->matrix.rotate));
 		// fs
@@ -353,9 +362,9 @@ public:
 	}
 
 	void initial() {
-		this->matrix.model = translate(mat4(1.0f), m_airplanePosition);
-		//GLfloat move = 20.0;
-		//this->matrix.model = rotate(mat4(1.0f), radians(move), m_airplanePosition);
+		//this->matrix.model = translate(mat4(1.0f), m_airplanePosition);
+		GLfloat move = 20.0;
+		this->matrix.model = rotate(mat4(1.0f), radians(move), m_airplanePosition);
 		this->matrix.rotate = m_airplaneRotMat;
 		
 		this->linkProgram();
@@ -600,8 +609,8 @@ int main() {
 
 	glfwSetKeyCallback(window, keyCallback);
 	glfwSetScrollCallback(window, mouseScrollCallback);
-	glfwSetMouseButtonCallback(window, mouseButtonCallback);
 	glfwSetCursorPosCallback(window, cursorPosCallback);
+	glfwSetMouseButtonCallback(window, mouseButtonCallback);
 	glfwSetFramebufferSizeCallback(window, resizeGL);
 
 	initializeGL();
@@ -672,7 +681,7 @@ void initializeGL() {
 
 	m_eye = glm::vec3(512.0, 10.0, 512.0);
 	m_lookAtCenter = glm::vec3(512.0, 0.0, 500.0);
-
+	m_lookDirection = m_lookAtCenter - m_eye;
 
 	initScene();
 	//setupGUI();
@@ -694,14 +703,19 @@ void updateState() {
 	// [TODO] update your eye position and look-at center here
 	// m_eye = ... ;
 	// m_lookAtCenter = ... ;
-	m_lookAtCenter.z = m_lookAtCenter.z + 1;
-	m_eye.z = m_eye.z + 1;
+	//m_lookAtCenter.z = m_lookAtCenter.z + 1;
+	//m_eye.z = m_eye.z + 1;
+
+	m_uAxis = cross(m_lookDirection, m_upDirection);
+	m_vAxis = cross(m_uAxis, m_lookDirection);
+	//cameraView = lookAt(camera, camera + lookDirection, upDirection);
 
 	// adjust camera position with terrain
 	adjustCameraPositionWithTerrain();
 
 	// calculate camera matrix
-	glm::mat4 vm = glm::lookAt(m_eye, m_lookAtCenter, glm::vec3(0.0, 1.0, 0.0));
+	//glm::mat4 vm = glm::lookAt(m_eye, m_lookAtCenter, glm::vec3(0.0, 1.0, 0.0));
+	mat4 vm = lookAt(m_eye, m_eye + m_lookDirection, m_upDirection);
 
 	// [IMPORTANT] set camera information to renderer
 	m_renderer->setView(vm, m_eye);
@@ -714,29 +728,126 @@ void paintGL() {
 	m_renderer->renderPass();
 
 	// [TODO] implement your rendering function here
-	m_combination.framebufferRender();
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
+	//m_combination.framebufferRender();
+	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	//glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
 
-	m_windowFrame.render();
+	//m_windowFrame.render();
 	//m_airplane.render();
 	////TwDraw();
 }
 
 ////////////////////////////////////////////////
-void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {}
+void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+#pragma region Trackball
+	if (action == GLFW_PRESS)
+	{
+		if (button == GLFW_MOUSE_BUTTON_LEFT) {
+			m_leftButtonPressed = true;
+			m_leftButtonPressedFlag = true;
+		}
+	}
+	else if (action == GLFW_RELEASE)
+	{
+		if (button == GLFW_MOUSE_BUTTON_LEFT) {
+			m_leftButtonPressed = false;
+			m_trackball_initial = vec2(0, 0);
+		}
+	}
+#pragma endregion
+
+}
 void mouseScrollCallback(GLFWwindow *window, double xoffset, double yoffset) {}
 void cursorPosCallback(GLFWwindow* window, double x, double y) {
 	cursorPos[0] = x;
 	cursorPos[1] = y;
-	//cout << "Cursor Click at (" << x << ", " << y << ")" << endl;
+	//cout << "Cursor at (" << x << ", " << y << ")" << endl;
+#pragma region Trackball
+	if (m_leftButtonPressed) {
+		if (m_leftButtonPressedFlag) {
+			m_trackball_initial = vec2(cursorPos[0], cursorPos[1]);
+			m_leftButtonPressedFlag = false;
+			//cout << "Cursor Pressed at (" << x << ", " << y << ")" << endl;
+		}
+		// Update trackball_initial
+		float disX = abs(x - m_trackball_initial.x);
+		if (disX > m_oldDistance.x) {
+			m_oldDistance.x = disX;
+		}
+		else {
+			m_oldDistance.x = 0.0f;
+			m_trackball_initial.x = x;
+		}
+		float disY = abs(y - m_trackball_initial.y);
+		if (disY > m_oldDistance.y) {
+			m_oldDistance.y = disY;
+		}
+		else {
+			m_oldDistance.y = 0.0f;
+			m_trackball_initial.y = y;
+		}
+		// limit the up angle
+		float limitCos = dot(normalize(m_lookDirection), normalize(m_upDirection));
+		if (limitCos > 0.8 || limitCos < -0.8) {
+			m_rotateAngle.x = (x - m_trackball_initial.x) / 70.0f;
+			float rotateRadians_x = radians(m_rotateAngle.x);
+			mat4 rotationX = rotate(mat4(1.0f), rotateRadians_x, m_vAxis);
+			m_lookDirection = vec3(rotationX * vec4(m_lookDirection, 1.0));
+
+			m_rotateAngle.y = (y - m_trackball_initial.y) / 100.0f;
+			if (limitCos > 0.8 && m_rotateAngle.y < 0) {
+				float rotateRadians_y = radians(m_rotateAngle.y);
+				mat4 rotationY = rotate(mat4(1.0f), rotateRadians_y, m_uAxis);
+				m_lookDirection = vec3(rotationY * vec4(m_lookDirection, 1.0));
+			}
+			else if (limitCos < -0.8 && m_rotateAngle.y > 0) {
+				float rotateRadians_y = radians(m_rotateAngle.y);
+				mat4 rotationY = rotate(mat4(1.0f), rotateRadians_y, m_uAxis);
+				m_lookDirection = vec3(rotationY * vec4(m_lookDirection, 1.0));
+			}
+		}
+		else {
+			m_rotateAngle.x = (x - m_trackball_initial.x) / 70.0f;
+			float rotateRadians_x = radians(m_rotateAngle.x);
+			mat4 rotationX = rotate(mat4(1.0f), rotateRadians_x, m_vAxis);
+			m_lookDirection = vec3(rotationX * vec4(m_lookDirection, 1.0));
+
+			m_rotateAngle.y = (y - m_trackball_initial.y) / 100.0f;
+			float rotateRadians_y = radians(m_rotateAngle.y);
+			mat4 rotationY = rotate(mat4(1.0f), rotateRadians_y, m_uAxis);
+			m_lookDirection = vec3(rotationY * vec4(m_lookDirection, 1.0));
+		}
+	}
+#pragma endregion
+
 }
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	printf("\nKey %d is pressed ", key);
 	switch (key)
 	{
+#pragma region Trackball
+	case GLFW_KEY_W:
+		m_eye += normalize(m_lookDirection) * m_cameraMoveSpeed;
+		break;
+	case GLFW_KEY_S:
+		m_eye -= normalize(m_lookDirection) * m_cameraMoveSpeed;
+		break;
+	case GLFW_KEY_D:
+		m_eye += normalize(m_uAxis) * m_cameraMoveSpeed;
+		break;
 	case GLFW_KEY_A:
+		m_eye -= normalize(m_uAxis) * m_cameraMoveSpeed;
+		break;
+	case GLFW_KEY_Q:
+		m_eye -= normalize(m_vAxis) * m_cameraMoveSpeed;
+		break;
+	case GLFW_KEY_E:
+		m_eye += normalize(m_vAxis) * m_cameraMoveSpeed;
+		break;
+#pragma endregion
+
+	case GLFW_KEY_Z:
 		m_airplane.blinnPhongFlag = !m_airplane.blinnPhongFlag;
 		if (m_airplane.blinnPhongFlag) {
 			cout << "True" << endl;
@@ -744,6 +855,9 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		else {
 			cout << "False" << endl;
 		}
+		break;
+	
+	default:
 		break;
 	}
 }
