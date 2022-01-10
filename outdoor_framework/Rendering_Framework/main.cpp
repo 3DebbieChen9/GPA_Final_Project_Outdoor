@@ -143,7 +143,6 @@ class class_airplane {
 public:
 	// Constructor
 	class_airplane() {}
-
 	// Struct
 	typedef struct struct_uniformID {
 		// vs
@@ -158,20 +157,14 @@ public:
 		GLint uv3Diffuse;
 		GLint ubPhongFlag;
 	};
-	////typedef struct struct_buffer {
-	////	GLuint vao;
-	////	GLuint vbo;
-	////};
 	typedef struct struct_matrix {
 		mat4 model = mat4(1.0f);
 		mat4 scale = mat4(1.0f);
 		mat4 rotate = mat4(1.0f);
 	};
-
-	// Variable
+	// Variables
 	GLuint program;
 	struct_uniformID uniformID;
-	////struct_buffer buffer;
 	struct_matrix matrix;
 	vector<Shape> shapes;
 	vector<Material> materials;
@@ -186,8 +179,8 @@ public:
 		GLuint vs = glCreateShader(GL_VERTEX_SHADER);
 		GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
 		// Load shader file
-		char** vs_source = loadShaderSource("airplane_vertex.vs.glsl");
-		char** fs_source = loadShaderSource("airplane_fragment.fs.glsl");
+		char** vs_source = loadShaderSource(".\\assets\\airplane_vertex.vs.glsl");
+		char** fs_source = loadShaderSource(".\\assets\\airplane_fragment.fs.glsl");
 		// Assign content of these shader files to those shaders we created before
 		glShaderSource(vs, 1, vs_source, NULL);
 		glShaderSource(fs, 1, fs_source, NULL);
@@ -335,6 +328,8 @@ public:
 		aiReleaseImport(scene);
 
 		this->matrix.model = translate(mat4(1.0f), m_airplanePosition);
+		//GLfloat move = 20.0;
+		//this->matrix.model = rotate(mat4(1.0f), radians(move), m_airplanePosition);
 		this->matrix.rotate = m_airplaneRotMat;
 		cout << "Load airplane.obj" << endl;
 	}
@@ -342,6 +337,7 @@ public:
 	void passUniformData(int blinnPhongFlag) {
 		// vs
 		glUniformMatrix4fv(this->uniformID.um4m, 1, GL_FALSE, value_ptr(this->matrix.model));
+		//glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(vec3(-10.0f, 5.0f, 0.0f), vec3(1.0f, 1.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f))));
 		glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(m_eye, m_lookAtCenter, glm::vec3(0.0, 1.0, 0.0))));
 		glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(cameraProjection));
 		glUniformMatrix4fv(this->uniformID.um4Lightmpv, 1, GL_FALSE, value_ptr(scale_bias_matrix * lightProjection * lightView * this->matrix.model * this->matrix.scale * this->matrix.rotate));
@@ -358,11 +354,14 @@ public:
 
 	void initial() {
 		this->matrix.model = translate(mat4(1.0f), m_airplanePosition);
+		//GLfloat move = 20.0;
+		//this->matrix.model = rotate(mat4(1.0f), radians(move), m_airplanePosition);
 		this->matrix.rotate = m_airplaneRotMat;
+		
 		this->linkProgram();
 		this->uniformLocation();
 		this->loadModel();
-		this->blinnPhongFlag = true;
+		this->blinnPhongFlag = false;
 	}
 
 	void render() {
@@ -388,12 +387,63 @@ class_airplane m_airplane;
 #pragma endregion
 
 #pragma region Combination
-//class class_combination {
-//public:
-//
-//};
-#pragma endregion
+class class_combination {
+public:
+	// Constructor
+	class_combination() {}
+	// Struct
+	typedef struct struct_buffer {
+		GLuint fbo;
+		GLuint depthRBO;
+	};
+	// Variables
+	struct_buffer buffer;
+	GLuint texture;
 
+	// Functions
+	void setBuffer() {
+		// FBO
+		glDeleteFramebuffers(1, &this->buffer.fbo);
+		glGenFramebuffers(1, &this->buffer.fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, this->buffer.fbo);
+
+		glDeleteTextures(1, &this->texture);
+		glGenTextures(1, &this->texture);
+		glBindTexture(GL_TEXTURE_2D, this->texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->texture, 0);
+
+		// DepthRBO
+		glDeleteRenderbuffers(1, &this->buffer.depthRBO);
+		glGenRenderbuffers(1, &this->buffer.depthRBO);
+		glBindRenderbuffer(GL_RENDERBUFFER, this->buffer.depthRBO);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, FRAME_WIDTH, FRAME_HEIGHT);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, this->buffer.depthRBO);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	}
+
+	void framebufferRender() {
+		glBindFramebuffer(GL_FRAMEBUFFER, this->buffer.fbo);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
+
+		// Enable Depth Test
+		glEnable(GL_DEPTH_TEST);
+		glDisable(GL_STENCIL_TEST);
+
+		//m_renderer->renderPass();
+		m_airplane.render();
+	}
+};
+class_combination m_combination;
+#pragma endregion
 
 #pragma region Window Frame
 class class_windowFrame {
@@ -430,8 +480,8 @@ public:
 		GLuint vs = glCreateShader(GL_VERTEX_SHADER);
 		GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
 		// Load shader file
-		char** vs_source = loadShaderSource("windowFrame_vertex.vs.glsl");
-		char** fs_source = loadShaderSource("windowFrame_fragment.fs.glsl");
+		char** vs_source = loadShaderSource(".\\assets\\windowFrame_vertex.vs.glsl");
+		char** fs_source = loadShaderSource(".\\assets\\windowFrame_fragment.fs.glsl");
 		// Assign content of these shader files to those shaders we created before
 		glShaderSource(vs, 1, vs_source, NULL);
 		glShaderSource(fs, 1, fs_source, NULL);
@@ -483,95 +533,13 @@ public:
 		this->passUniformData();
 		glBindVertexArray(this->buffer.vao);
 		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, TEST_TEXTURE);
+		glBindTexture(GL_TEXTURE_2D, m_combination.texture);
 
 		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 	}
-
-	//void useProgram() {
-	//	glUseProgram(this->program);
-	//	this->render();
-	//}
 };
 class_windowFrame m_windowFrame;
-
-//GLuint m_windowProgram;
-//GLuint m_windowVAO;
-//GLuint m_windowVBO;
-////GLuint m_windowDepthRBO;
-////GLuint m_windowFBO;
-////GLuint m_windowFBODataTexture;
-//// uniform
-//GLuint m_window_texLoc;
-//
-//static const GLfloat m_windowPosition[] =
-//{
-//	 1.0f, -1.0f,  1.0f,  0.0f,
-//	-1.0f, -1.0f,  0.0f,  0.0f,
-//	-1.0f,  1.0f,  0.0f,  1.0f,
-//	 1.0f,  1.0f,  1.0f,  1.0f
-//};
-
-//void frameBuffer_program() {
-//	m_frameProgram = glCreateProgram();
-//
-//	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-//	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-//
-//	char** vertexShaderSource = loadShaderSource(".\\assets\\frameBuffer_vertex.vs.glsl");
-//	char** fragmentShaderSource = loadShaderSource(".\\assets\\frameBuffer_fragment.fs.glsl");
-//
-//	glShaderSource(vertexShader, 1, vertexShaderSource, NULL);
-//	glShaderSource(fragmentShader, 1, fragmentShaderSource, NULL);
-//
-//	// Free the shader file string(won't be used any more)
-//	freeShaderSource(vertexShaderSource);
-//	freeShaderSource(fragmentShaderSource);
-//
-//	// Compile these shaders
-//	glCompileShader(vertexShader);
-//	glCompileShader(fragmentShader);
-//
-//	glAttachShader(m_frameProgram, vertexShader);
-//	glAttachShader(m_frameProgram, fragmentShader);
-//	glLinkProgram(m_frameProgram);
-//
-//	glGenVertexArrays(1, &m_frameVAO);
-//	glBindVertexArray(m_frameVAO);
-//
-//	glGenBuffers(1, &m_frameVBO);
-//	glBindBuffer(GL_ARRAY_BUFFER, m_frameVBO);
-//	glBufferData(GL_ARRAY_BUFFER, sizeof(m_framePosition), m_framePosition, GL_STATIC_DRAW);
-//
-//	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, 0);
-//	glEnableVertexAttribArray(0);
-//	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, (const GLvoid*)(sizeof(GL_FLOAT) * 2));
-//	glEnableVertexAttribArray(1);
-//
-//	glGenFramebuffers(1, &m_frameFBO);
-//	m_frame_texLoc = glGetUniformLocation(m_frameProgram, "tex");
-//
-//	My_Resize(FRAME_WIDTH, FRAME_HEIGHT);
-//}
-//
-//void frameBuffer_render() {
-//	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//	glClearColor(1.0f, 0.5f, 0.5f, 0.5f);
-//	
-//	glUseProgram(m_frameProgram);
-//
-//	glUniform1i(m_frame_texLoc, 0);
-//
-//	glBindVertexArray(m_frameVAO);
-//	glActiveTexture(GL_TEXTURE0);
-//	glBindTexture(GL_TEXTURE_2D, m_frameFBODataTexture);
-//
-//	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-//}
 #pragma endregion
-
-
 
 
 #pragma region GUI
@@ -708,38 +676,18 @@ void initializeGL() {
 
 	initScene();
 	//setupGUI();
-	//airplane_init();
-
+	m_airplane.initial();
+	m_windowFrame.initial();
+	m_combination.setBuffer();
 	m_renderer->setProjection(glm::perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f));
 }
-////void My_Resize(int width, int height) {
-////	// If the windows is reshaped, we need to reset some settings of framebuffer
-////	glDeleteRenderbuffers(1, &m_frameDepthRBO);
-////	glDeleteTextures(1, &m_frameFBODataTexture);
-////	glGenRenderbuffers(1, &m_frameDepthRBO);
-////	glBindRenderbuffer(GL_RENDERBUFFER, m_frameDepthRBO);
-////	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, width, height);
-////
-////	glGenTextures(1, &m_frameFBODataTexture);
-////	glBindTexture(GL_TEXTURE_2D, m_frameFBODataTexture);
-////	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-////	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-////	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-////	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-////	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-////
-////	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_frameFBO);
-////	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_frameDepthRBO);
-////	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_frameFBODataTexture, 0);
-////}
+
 void resizeGL(GLFWwindow *window, int w, int h) {
 	FRAME_WIDTH = w;
 	FRAME_HEIGHT = h;
 	m_renderer->resize(w, h);
 	m_renderer->setProjection(glm::perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f));
 	cameraProjection = perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f);
-
-	////My_Resize(FRAME_WIDTH, FRAME_HEIGHT);
 }
 
 void updateState() {
@@ -762,18 +710,18 @@ void updateState() {
 	updateAirplane(vm);
 }
 void paintGL() {
-	////glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_frameFBO);
-	////glDrawBuffer(GL_COLOR_ATTACHMENT0);
-	////glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	// render terrain
 	m_renderer->renderPass();
 
 	// [TODO] implement your rendering function here
-	////airplane_render();
-	////frameBuffer_render();
+	m_combination.framebufferRender();
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
+
+	m_windowFrame.render();
+	//m_airplane.render();
 	////TwDraw();
-	////glutSwapBuffers();
 }
 
 ////////////////////////////////////////////////
