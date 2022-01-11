@@ -44,8 +44,9 @@ double cursorPos[2];
 SceneRenderer *m_renderer = nullptr;
 glm::vec3 m_lookAtCenter = vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 m_eye = vec3(0.0f, 0.0f, 0.0f); // Eye Position / Camera Position
+mat4 m_cameraProjection(1.0f);
 #pragma region Trackball
-vec3 m_lookDirection = vec3(-1.0f, -1.0f, 0.0f);
+vec3 m_lookDirection = vec3(0.0f, 0.0f, 0.0f);
 vec3 m_upDirection = vec3(0.0f, 1.0f, 0.0f);
 vec3 m_uAxis = vec3(1.0f, 0.0f, 0.0f);
 vec3 m_vAxis = vec3(0.0f, 1.0f, 0.0f);
@@ -142,9 +143,6 @@ vec3 lightPosition = vec3(0.2f, 0.6f, 0.5f);
 mat4 scale_bias_matrix = translate(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f)) * scale(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f));
 #pragma endregion
 
-#pragma region Camera
-mat4 cameraProjection(1.0f);
-#pragma endregion
 
 
 #pragma region Airplane
@@ -155,16 +153,16 @@ public:
 	// Struct
 	typedef struct struct_uniformID {
 		// vs
-		GLint um4m;
-		GLint um4v;
-		GLint um4p; 
-		GLint um4Lightmpv;
+		GLuint um4m;
+		GLuint um4v;
+		GLuint um4p;
+		GLuint um4Lightmvp;
 		// fs
-		GLint texLoc;
-		GLint uv3Ambient;
-		GLint uv3Specular;
-		GLint uv3Diffuse;
-		GLint ubPhongFlag;
+		GLuint texLoc;
+		GLuint uv3Ambient;
+		GLuint uv3Specular;
+		GLuint uv3Diffuse;
+		GLuint ubPhongFlag;
 	};
 	typedef struct struct_matrix {
 		mat4 model = mat4(1.0f);
@@ -210,7 +208,7 @@ public:
 		this->uniformID.um4m = glGetUniformLocation(this->program, "um4m");
 		this->uniformID.um4v = glGetUniformLocation(this->program, "um4v");
 		this->uniformID.um4p = glGetUniformLocation(this->program, "um4p");
-		this->uniformID.um4Lightmpv = glGetUniformLocation(this->program, "um4Lightmpv");
+		this->uniformID.um4Lightmvp = glGetUniformLocation(this->program, "um4Lightmvp");
 		// fs
 		this->uniformID.texLoc = glGetUniformLocation(this->program, "tex");
 		this->uniformID.ubPhongFlag = glGetUniformLocation(this->program, "ubPhongFlag");
@@ -233,8 +231,8 @@ public:
 			if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS)
 			{
 				// load width, height and data from texturePath.C_Str();
-				string p = ".\\models\\"; /*..\\Assets\\*/
-				texturePath = p + texturePath.C_Str();
+				//string p = ".\\models\\"; /*..\\Assets\\*/
+				//texturePath = p + texturePath.C_Str();
 				cout << texturePath.C_Str() << endl;
 				TextureData tex = loadImg(texturePath.C_Str());
 				glGenTextures(1, &Material.diffuse_tex);
@@ -264,11 +262,6 @@ public:
 			glGenVertexArrays(1, &shape.vao);
 			glBindVertexArray(shape.vao);
 		
-			// create 3 vbos to hold data
-			glGenBuffers(1, &shape.vbo_position);
-			glGenBuffers(1, &shape.vbo_texcoord);
-			glGenBuffers(1, &shape.vbo_normal);
-		
 			vector<float> position;
 			vector<float> normal;
 			vector<float> texcoord;
@@ -287,6 +280,11 @@ public:
 				normal.push_back(mesh->mNormals[v][2]);
 			}
 		
+			// create 3 vbos to hold data
+			glGenBuffers(1, &shape.vbo_position);
+			glGenBuffers(1, &shape.vbo_texcoord);
+			glGenBuffers(1, &shape.vbo_normal);
+
 			// position
 			glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
 			glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &position[0], GL_STATIC_DRAW);
@@ -305,8 +303,6 @@ public:
 			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
 			glEnableVertexAttribArray(2);
 		
-			// create 1 ibo to hold data
-			glGenBuffers(1, &shape.ibo);
 			vector<unsigned int> face;
 			for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
 			{
@@ -315,7 +311,8 @@ public:
 				face.push_back(mesh->mFaces[f].mIndices[1]);
 				face.push_back(mesh->mFaces[f].mIndices[2]);
 			}
-		
+			// create 1 ibo to hold data
+			glGenBuffers(1, &shape.ibo);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->mNumFaces * 3 * sizeof(unsigned int), &face[0], GL_STATIC_DRAW);
 		
@@ -335,21 +332,18 @@ public:
 		}
 		
 		aiReleaseImport(scene);
-
-		//this->matrix.model = translate(mat4(1.0f), m_airplanePosition);
-		GLfloat move = 20.0;
-		this->matrix.model = rotate(mat4(1.0f), radians(move), m_airplanePosition);
-		this->matrix.rotate = m_airplaneRotMat;
-		cout << "Load airplane.obj" << endl;
+		cout << "Load airplane.obj done" << endl;
 	}
 
 	void passUniformData(int blinnPhongFlag) {
 		// vs
+		//glUniformMatrix4fv(this->uniformID.um4m, 1, GL_FALSE, value_ptr(this->matrix.model * this->matrix.rotate));
+		//glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(vec3(-10.0f, 5.0f, 0.0f), vec3(1.0f, 1.0f, 0.0f), m_upDirection)));
+		//glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f)));
 		glUniformMatrix4fv(this->uniformID.um4m, 1, GL_FALSE, value_ptr(this->matrix.model));
-		glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(vec3(-10.0f, 5.0f, 0.0f), vec3(1.0f, 1.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f))));
-		//glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(m_eye, m_lookAtCenter, glm::vec3(0.0, 1.0, 0.0))));
-		glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(cameraProjection));
-		glUniformMatrix4fv(this->uniformID.um4Lightmpv, 1, GL_FALSE, value_ptr(scale_bias_matrix * lightProjection * lightView * this->matrix.model * this->matrix.scale * this->matrix.rotate));
+		glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(m_eye, m_lookAtCenter, m_upDirection)));
+		glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(m_cameraProjection));
+		glUniformMatrix4fv(this->uniformID.um4Lightmvp, 1, GL_FALSE, value_ptr(scale_bias_matrix * lightProjection * lightView * this->matrix.model * this->matrix.scale * this->matrix.rotate));
 		// fs
 		glUniform1i(this->uniformID.texLoc, 3);
 		for (int i = 0; i < this->shapes.size(); i++) {
@@ -362,34 +356,44 @@ public:
 	}
 
 	void initial() {
-		//this->matrix.model = translate(mat4(1.0f), m_airplanePosition);
 		GLfloat move = 20.0;
-		this->matrix.model = rotate(mat4(1.0f), radians(move), m_airplanePosition);
-		this->matrix.rotate = m_airplaneRotMat;
+		//this->matrix.model = rotate(mat4(1.0f), radians(move), m_airplanePosition);
+		//this->matrix.model = translate(mat4(1.0f), vec3(0.0, 0.0, 0.0));
+		//this->matrix.model = translate(mat4(1.0f), vec3(200.0, 70.0, 100.0));
+		//this->matrix.model = mat4(1.0f);
 		
+		this->matrix.rotate = m_airplaneRotMat;
+		this->matrix.model = translate(mat4(1.0f), m_airplanePosition);// *this->matrix.rotate;
+		this->blinnPhongFlag = false;
+
+		this->loadModel();
 		this->linkProgram();
 		this->uniformLocation();
-		this->loadModel();
-		this->blinnPhongFlag = false;
 	}
 
 	void render() {
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		glClearColor(1.0f, 0.5f, 1.0f, 1.0f);
 		glUseProgram(this->program);
+
 		if (this->blinnPhongFlag) {
 			this->passUniformData(1);
 		}
 		else {
 			this->passUniformData(0);
 		}
-		glActiveTexture(GL_TEXTURE3);
+		/*glActiveTexture(GL_TEXTURE3);*/
 		for (int i = 0; i < this->shapes.size(); i++) {
 			glBindVertexArray(this->shapes[i].vao);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->shapes[i].ibo);
 			int materialID = this->shapes[i].materialID;
+			glActiveTexture(GL_TEXTURE3);
 			glBindTexture(GL_TEXTURE_2D, this->materials[materialID].diffuse_tex);
 			glDrawElements(GL_TRIANGLES, this->shapes[i].drawCount, GL_UNSIGNED_INT, 0);
 		}
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
+		//glUseProgram(0);
 	}
 };
 class_airplane m_airplane;
@@ -519,8 +523,8 @@ public:
 		glBufferData(GL_ARRAY_BUFFER, sizeof(this->window_positions), this->window_positions, GL_STATIC_DRAW);
 
 		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, 0);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, (const GLvoid*)(sizeof(GL_FLOAT) * 2));
 		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, (const GLvoid*)(sizeof(GL_FLOAT) * 2));
 		glEnableVertexAttribArray(1);
 
 		glBindVertexArray(0);
@@ -684,11 +688,11 @@ void initializeGL() {
 	m_lookDirection = m_lookAtCenter - m_eye;
 
 	initScene();
-	//setupGUI();
 	m_airplane.initial();
-	m_windowFrame.initial();
-	m_combination.setBuffer();
+	//m_windowFrame.initial();
+	//m_combination.setBuffer();
 	m_renderer->setProjection(glm::perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f));
+	m_cameraProjection = perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f);
 }
 
 void resizeGL(GLFWwindow *window, int w, int h) {
@@ -696,7 +700,7 @@ void resizeGL(GLFWwindow *window, int w, int h) {
 	FRAME_HEIGHT = h;
 	m_renderer->resize(w, h);
 	m_renderer->setProjection(glm::perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f));
-	cameraProjection = perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f);
+	m_cameraProjection = perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f);
 }
 
 void updateState() {
@@ -708,14 +712,14 @@ void updateState() {
 
 	m_uAxis = cross(m_lookDirection, m_upDirection);
 	m_vAxis = cross(m_uAxis, m_lookDirection);
-	//cameraView = lookAt(camera, camera + lookDirection, upDirection);
+	m_lookAtCenter = m_eye + m_lookDirection;
 
 	// adjust camera position with terrain
 	adjustCameraPositionWithTerrain();
 
 	// calculate camera matrix
 	//glm::mat4 vm = glm::lookAt(m_eye, m_lookAtCenter, glm::vec3(0.0, 1.0, 0.0));
-	mat4 vm = lookAt(m_eye, m_eye + m_lookDirection, m_upDirection);
+	mat4 vm = lookAt(m_eye, m_lookAtCenter, m_upDirection);
 
 	// [IMPORTANT] set camera information to renderer
 	m_renderer->setView(vm, m_eye);
@@ -734,8 +738,7 @@ void paintGL() {
 	//glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
 
 	//m_windowFrame.render();
-	//m_airplane.render();
-	////TwDraw();
+	m_airplane.render();
 }
 
 ////////////////////////////////////////////////
@@ -768,7 +771,7 @@ void cursorPosCallback(GLFWwindow* window, double x, double y) {
 		if (m_leftButtonPressedFlag) {
 			m_trackball_initial = vec2(cursorPos[0], cursorPos[1]);
 			m_leftButtonPressedFlag = false;
-			//cout << "Cursor Pressed at (" << x << ", " << y << ")" << endl;
+			cout << "Cursor Pressed at (" << x << ", " << y << ")" << endl;
 		}
 		// Update trackball_initial
 		float disX = abs(x - m_trackball_initial.x);

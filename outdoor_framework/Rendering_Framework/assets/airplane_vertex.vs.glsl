@@ -7,7 +7,7 @@ layout(location = 2) in vec3 iv3normal;
 uniform mat4 um4m;
 uniform mat4 um4v;
 uniform mat4 um4p;
-uniform mat4 um4Lightmpv;
+uniform mat4 um4Lightmvp;
 
 out VertexData
 {
@@ -24,7 +24,7 @@ void main()
 	gl_Position = um4p * um4v * um4m * vec4(iv3vertex, 1.0);
 	vertexData.texcoord = iv2tex_coord;
 	vertexData.normal = iv3normal;
-	vertexData.lightCoord = um4Lightmpv * vec4(iv3vertex, 1.0f);
+	vertexData.lightCoord = um4Lightmvp * vec4(iv3vertex, 1.0);
 
 	vec4 P = um4v * um4m * vec4(iv3vertex, 1.0);
 	vec3 V = normalize(-P.xyz);

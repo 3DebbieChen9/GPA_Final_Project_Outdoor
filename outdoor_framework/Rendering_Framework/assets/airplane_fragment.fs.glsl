@@ -42,7 +42,7 @@ void main()
 		vec3 final_diffuse = kd * Id * max(dot(vertexData.N, vertexData.L), 0.0);
 		vec3 final_specular = ks * Is * pow(max(dot(vertexData.N, vertexData.H), 0.0), n);
 		fragColor = vec4(final_ambient + final_diffuse + final_specular, 1.0);
-		//fragColor = vec4(difftex, 1.0);
+		fragColor = vec4(difftex, 1.0);
 	}
 	else {
 		/*vec3 Ia = vec3(0.3);
@@ -52,6 +52,8 @@ void main()
 		vec3 diffuse = kd * Id * max(dot(vertexData.N, vertexData.L), 0.0);
 		vec3 specular = ks * Is * pow(max(dot(vertexData.N, vertexData.H), 0.0), n);
 		fragColor = vec4(ambient + diffuse + specular, 1.0);*/
-		fragColor = vec4(difftex, 1.0);
+		//fragColor = vec4(difftex, 1.0);
+		fragColor = vec4(texture(tex, vertexData.normal).rgb, 1.0)
 	}
+	fragColor = vec4(vec3(1.0,0.0,0.0), 1.0)
 }
