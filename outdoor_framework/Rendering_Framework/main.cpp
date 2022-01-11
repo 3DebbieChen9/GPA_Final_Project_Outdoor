@@ -337,10 +337,7 @@ public:
 
 	void passUniformData(int blinnPhongFlag) {
 		// vs
-		//glUniformMatrix4fv(this->uniformID.um4m, 1, GL_FALSE, value_ptr(this->matrix.model * this->matrix.rotate));
-		//glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(vec3(-10.0f, 5.0f, 0.0f), vec3(1.0f, 1.0f, 0.0f), m_upDirection)));
-		//glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f)));
-		glUniformMatrix4fv(this->uniformID.um4m, 1, GL_FALSE, value_ptr(this->matrix.model));
+		glUniformMatrix4fv(this->uniformID.um4m, 1, GL_FALSE, value_ptr(this->matrix.model * this->matrix.rotate));
 		glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(m_eye, m_lookAtCenter, m_upDirection)));
 		glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(m_cameraProjection));
 		glUniformMatrix4fv(this->uniformID.um4Lightmvp, 1, GL_FALSE, value_ptr(scale_bias_matrix * lightProjection * lightView * this->matrix.model * this->matrix.scale * this->matrix.rotate));
@@ -368,14 +365,16 @@ public:
 
 		this->loadModel();
 		this->linkProgram();
+		cout << "program " << this->program << endl;
 		this->uniformLocation();
 	}
 
 	void render() {
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-		glClearColor(1.0f, 0.5f, 1.0f, 1.0f);
+		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		//glClearColor(1.0f, 0.5f, 1.0f, 1.0f);
 		glUseProgram(this->program);
-
+		this->matrix.rotate = m_airplaneRotMat;
+		this->matrix.model = translate(mat4(1.0f), m_airplanePosition);
 		if (this->blinnPhongFlag) {
 			this->passUniformData(1);
 		}
@@ -398,6 +397,255 @@ public:
 };
 class_airplane m_airplane;
 #pragma endregion
+
+#pragma region House
+class class_house {
+public:
+	// Constructor
+	class_house() {}
+	// Struct
+	typedef struct struct_uniformID {
+		// vs
+		GLuint um4m;
+		GLuint um4v;
+		GLuint um4p;
+		GLuint um4Lightmvp;
+		// fs
+		GLuint texLoc;
+		GLuint uv3Ambient;
+		GLuint uv3Specular;
+		GLuint uv3Diffuse;
+		GLuint ubPhongFlag;
+	};
+	typedef struct struct_matrix {
+		mat4 model = mat4(1.0f);
+		mat4 scale = mat4(1.0f);
+		mat4 rotate = mat4(1.0f);
+	};
+	// Variables
+	GLuint program;
+	struct_uniformID uniformID;
+	struct_matrix matrix;
+	vector<Shape> shapes;
+	vector<Material> materials;
+
+	bool blinnPhongFlag;
+	float rotateAngle;
+	vec3 position;
+
+	// Setting Functions
+	void linkProgram() {
+		// Create Shader Program
+		this->program = glCreateProgram();
+		// Create customize shader by tell openGL specify shader type 
+		GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+		GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+		// Load shader file
+		char** vs_source = loadShaderSource(".\\assets\\house_vertex.vs.glsl");
+		char** fs_source = loadShaderSource(".\\assets\\house_fragment.fs.glsl");
+		// Assign content of these shader files to those shaders we created before
+		glShaderSource(vs, 1, vs_source, NULL);
+		glShaderSource(fs, 1, fs_source, NULL);
+		// Free the shader file string(won't be used any more)
+		freeShaderSource(vs_source);
+		freeShaderSource(fs_source);
+		// Compile these shaders
+		glCompileShader(vs);
+		glCompileShader(fs);
+		// Assign the program we created before with these shaders
+		glAttachShader(this->program, vs);
+		glAttachShader(this->program, fs);
+		glLinkProgram(this->program);
+	}
+	void uniformLocation() {
+		// vs
+		this->uniformID.um4m = glGetUniformLocation(this->program, "um4m");
+		this->uniformID.um4v = glGetUniformLocation(this->program, "um4v");
+		this->uniformID.um4p = glGetUniformLocation(this->program, "um4p");
+		this->uniformID.um4Lightmvp = glGetUniformLocation(this->program, "um4Lightmvp");
+		// fs
+		this->uniformID.texLoc = glGetUniformLocation(this->program, "tex");
+		this->uniformID.ubPhongFlag = glGetUniformLocation(this->program, "ubPhongFlag");
+		this->uniformID.uv3Ambient = glGetUniformLocation(this->program, "uv3Ambient");
+		this->uniformID.uv3Specular = glGetUniformLocation(this->program, "uv3Specular");
+		this->uniformID.uv3Diffuse = glGetUniformLocation(this->program, "uv3Diffuse");
+	}
+	void loadModel() {
+		char* filepath = ".\\models\\medievalHouse.obj";
+		const aiScene* scene = aiImportFile(filepath, aiProcessPreset_TargetRealtime_MaxQuality);
+
+		// Material
+		for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
+		{
+			aiMaterial* material = scene->mMaterials[i];
+			Material Material;
+			aiString texturePath;
+			aiColor3D color;
+			if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS)
+			{
+				// load width, height and data from texturePath.C_Str();
+				//string p = ".\\models\\"; /*..\\Assets\\*/
+				//texturePath = p + texturePath.C_Str();
+				cout << texturePath.C_Str() << endl;
+				TextureData tex = loadImg(texturePath.C_Str());
+				glGenTextures(1, &Material.diffuse_tex);
+				glBindTexture(GL_TEXTURE_2D, Material.diffuse_tex);
+				//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
+				glGenerateMipmap(GL_TEXTURE_2D);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			}
+			material->Get(AI_MATKEY_COLOR_AMBIENT, color);
+			Material.ka = glm::vec4(color.r, color.g, color.b, 1.0f);
+			material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+			Material.kd = glm::vec4(color.r, color.g, color.b, 1.0f);
+			material->Get(AI_MATKEY_COLOR_SPECULAR, color);
+			Material.ks = glm::vec4(color.r, color.g, color.b, 1.0f);
+			// save material
+			this->materials.push_back(Material);
+		}
+		// Geometry
+		for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+		{
+			aiMesh* mesh = scene->mMeshes[i];
+			Shape shape;
+			glGenVertexArrays(1, &shape.vao);
+			glBindVertexArray(shape.vao);
+
+			vector<float> position;
+			vector<float> normal;
+			vector<float> texcoord;
+			for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
+			{
+				// mesh->mVertices[v][0~2] => position
+				position.push_back(mesh->mVertices[v][0]);
+				position.push_back(mesh->mVertices[v][1]);
+				position.push_back(mesh->mVertices[v][2]);
+				// mesh->mTextureCoords[0][v][0~1] => texcoord
+				texcoord.push_back(mesh->mTextureCoords[0][v][0]);
+				texcoord.push_back(mesh->mTextureCoords[0][v][1]);
+				// mesh->mNormals[v][0~2] => normal
+				normal.push_back(mesh->mNormals[v][0]);
+				normal.push_back(mesh->mNormals[v][1]);
+				normal.push_back(mesh->mNormals[v][2]);
+			}
+
+			// create 3 vbos to hold data
+			glGenBuffers(1, &shape.vbo_position);
+			glGenBuffers(1, &shape.vbo_texcoord);
+			glGenBuffers(1, &shape.vbo_normal);
+
+			// position
+			glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
+			glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &position[0], GL_STATIC_DRAW);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+			glEnableVertexAttribArray(0);
+
+			// texcoord
+			glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
+			glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 2 * sizeof(GL_FLOAT), &texcoord[0], GL_STATIC_DRAW);
+			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+			glEnableVertexAttribArray(1);
+
+			// normal
+			glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
+			glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &normal[0], GL_STATIC_DRAW);
+			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+			glEnableVertexAttribArray(2);
+
+			vector<unsigned int> face;
+			for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
+			{
+				// mesh->mFaces[f].mIndices[0~2] => index
+				face.push_back(mesh->mFaces[f].mIndices[0]);
+				face.push_back(mesh->mFaces[f].mIndices[1]);
+				face.push_back(mesh->mFaces[f].mIndices[2]);
+			}
+			// create 1 ibo to hold data
+			glGenBuffers(1, &shape.ibo);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->mNumFaces * 3 * sizeof(unsigned int), &face[0], GL_STATIC_DRAW);
+
+			shape.materialID = mesh->mMaterialIndex;
+			shape.drawCount = mesh->mNumFaces * 3;
+			// save shape
+			this->shapes.push_back(shape);
+
+			position.clear();
+			position.shrink_to_fit();
+			texcoord.clear();
+			texcoord.shrink_to_fit();
+			normal.clear();
+			normal.shrink_to_fit();
+			face.clear();
+			face.shrink_to_fit();
+		}
+
+		aiReleaseImport(scene);
+		cout << "Load medievalHouse.obj done" << endl;
+	}
+
+	void passUniformData(int blinnPhongFlag) {
+		// vs
+		glUniformMatrix4fv(this->uniformID.um4m, 1, GL_FALSE, value_ptr(this->matrix.model * this->matrix.rotate));
+		glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(m_eye, m_lookAtCenter, m_upDirection)));
+		glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(m_cameraProjection));
+		glUniformMatrix4fv(this->uniformID.um4Lightmvp, 1, GL_FALSE, value_ptr(scale_bias_matrix * lightProjection * lightView * this->matrix.model * this->matrix.scale * this->matrix.rotate));
+		// fs
+		glUniform1i(this->uniformID.texLoc, 3);
+		for (int i = 0; i < this->shapes.size(); i++) {
+			int materialID = this->shapes[i].materialID;
+			glUniform3fv(this->uniformID.uv3Ambient, 1, value_ptr(this->materials[materialID].ka));
+			glUniform3fv(this->uniformID.uv3Specular, 1, value_ptr(this->materials[materialID].ks));
+			glUniform3fv(this->uniformID.uv3Diffuse, 1, value_ptr(this->materials[materialID].kd));
+		}
+		glUniform1i(this->uniformID.ubPhongFlag, blinnPhongFlag);
+	}
+
+	void initial(float _rotateAngle, vec3 _position) {
+		this->rotateAngle = _rotateAngle;
+		this->position = _position;
+		this->matrix.rotate = rotate(mat4(1.0f), radians(this->rotateAngle), vec3(0.0f, 1.0f, 0.0f));
+		this->matrix.model = translate(mat4(1.0f), this->position);
+		this->blinnPhongFlag = false;
+		
+		this->loadModel();
+		this->linkProgram();
+		cout << "program " << this->program << endl;
+		this->uniformLocation();
+	}
+
+	void render() {
+		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		//glClearColor(1.0f, 0.5f, 1.0f, 1.0f);
+		glUseProgram(this->program);
+		if (this->blinnPhongFlag) {
+			this->passUniformData(1);
+		}
+		else {
+			this->passUniformData(0);
+		}
+		/*glActiveTexture(GL_TEXTURE3);*/
+		for (int i = 0; i < this->shapes.size(); i++) {
+			glBindVertexArray(this->shapes[i].vao);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->shapes[i].ibo);
+			int materialID = this->shapes[i].materialID;
+			glActiveTexture(GL_TEXTURE3);
+			glBindTexture(GL_TEXTURE_2D, this->materials[materialID].diffuse_tex);
+			glDrawElements(GL_TRIANGLES, this->shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+		}
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		//glUseProgram(0);
+	}
+};
+class_house m_houseA;
+class_house m_houseB;
+#pragma endregion
+
 
 #pragma region Combination
 class class_combination {
@@ -689,6 +937,8 @@ void initializeGL() {
 
 	initScene();
 	m_airplane.initial();
+	m_houseA.initial(60.0f, vec3(631.0f, 130.0f, 468.0f));
+	m_houseB.initial(15.0f, vec3(656.0f, 135.0f, 483.0f));
 	//m_windowFrame.initial();
 	//m_combination.setBuffer();
 	m_renderer->setProjection(glm::perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f));
@@ -739,6 +989,9 @@ void paintGL() {
 
 	//m_windowFrame.render();
 	m_airplane.render();
+	m_houseA.render();
+	m_houseB.render();
+	
 }
 
 ////////////////////////////////////////////////
