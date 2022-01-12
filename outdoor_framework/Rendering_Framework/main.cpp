@@ -989,8 +989,8 @@ void paintGL() {
 
 	//m_windowFrame.render();
 	m_airplane.render();
-	m_houseA.render();
-	m_houseB.render();
+	// m_houseA.render();
+	// m_houseB.render();
 	
 }
 
