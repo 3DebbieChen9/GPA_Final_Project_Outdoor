@@ -57,6 +57,7 @@ void SceneRenderer::setUpShader(){
 	this->m_shader->useShader();
 
 	const GLuint programId = this->m_shader->getProgramID();
+
 	SceneManager *manager = SceneManager::Instance();
 	manager->m_vertexHandle = glGetAttribLocation(programId, "v_vertex");
 	manager->m_normalHandle = glGetAttribLocation(programId, "v_normal");

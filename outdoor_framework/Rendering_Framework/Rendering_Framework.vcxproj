@@ -19,7 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="main.cpp">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="SceneSetting.cpp" />
     <ClCompile Include="src\basic\SceneRenderer.cpp" />
     <ClCompile Include="src\basic\Shader.cpp" />
@@ -37,14 +40,6 @@
     <ClInclude Include="src\basic\TextureMaterial.h" />
     <ClInclude Include="src\basic\Transformation.h" />
     <ClInclude Include="src\Terrain.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="assets\airplane_fragment.fs.glsl" />
-    <None Include="assets\airplane_vertex.vs.glsl" />
-    <None Include="assets\house_fragment.fs.glsl" />
-    <None Include="assets\house_vertex.vs.glsl" />
-    <None Include="assets\windowFrame_fragment.fs.glsl" />
-    <None Include="assets\windowFrame_vertex.vs.glsl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{ADA5FF44-3FBE-44D5-94ED-FFD82E3DF373}</ProjectGuid>
@@ -95,11 +90,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)\externals\include\AntTweakBar;$(SolutionDir)\externals\include;$(SolutionDir)\externals\include\FreeGLUT;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)\externals\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)\externals\libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)\externals\include\AntTweakBar;$(SolutionDir)\externals\include;$(SolutionDir)\externals\include\FreeGLUT;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)\externals\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)\externals\libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -121,8 +116,6 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)\externals\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AntTweakBar64.lib;AntTweakBar.lib;freeglut.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -152,11 +145,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)\externals\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AntTweakBar64.lib;AntTweakBar.lib;freeglut.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets" />
 </Project>

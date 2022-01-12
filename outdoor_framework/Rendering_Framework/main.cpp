@@ -1,4 +1,4 @@
-﻿#include "src\basic\SceneRenderer.h"
+#include "src\basic\SceneRenderer.h"
 #include <GLFW\glfw3.h>
 #include "SceneSetting.h"
 
@@ -6,15 +6,9 @@
 #include "assimp/cimport.h"
 #include "assimp/postprocess.h"
 #include "../externals/include/stb_image.h"
-#include "../externals/include/AntTweakBar/AntTweakBar.h"
-#include "../externals/include/FreeGLUT/freeglut.h"
 
-#pragma comment (lib, "lib-vc2017\\glfw3.lib")
-#pragma comment (lib, "assimp\\assimp-vc141-mt.lib")
-#pragma comment (lib, "freeglut.lib")
-#pragma comment (lib, "AntTweakBar.lib")
-#pragma comment (lib, "AntTweakBar64.lib")
-
+#pragma comment (lib, "lib-vc2015\\glfw3.lib")
+#pragma comment (lib, "assimp\\assimp-vc140-mtd.lib")
 
 using namespace glm;
 using namespace std;
@@ -36,27 +30,34 @@ void updateAirplane(const glm::mat4 &viewMatrix);
 void initScene();
 
 bool m_leftButtonPressed = false;
-bool m_leftButtonPressedFlag = false;
+bool m_leftButtonPressedFirst = false;
 bool m_rightButtonPressed = false;
-
 double cursorPos[2];
 
 SceneRenderer *m_renderer = nullptr;
-glm::vec3 m_lookAtCenter = vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 m_eye = vec3(0.0f, 0.0f, 0.0f); // Eye Position / Camera Position
+glm::vec3 m_lookAtCenter;
+glm::vec3 m_eye;
+
 mat4 m_cameraProjection(1.0f);
+mat4 m_cameraView(1.0f);
 #pragma region Trackball
 vec3 m_lookDirection = vec3(0.0f, 0.0f, 0.0f);
 vec3 m_upDirection = vec3(0.0f, 1.0f, 0.0f);
 vec3 m_uAxis = vec3(1.0f, 0.0f, 0.0f);
 vec3 m_vAxis = vec3(0.0f, 1.0f, 0.0f);
-float m_cameraMoveSpeed = 2.0f;//0.05f;
+float m_cameraMoveSpeed = 2.0f; //0.05f;
 vec2 m_trackball_initial = vec2(0, 0);
 vec2 m_oldDistance = vec2(0, 0);
 vec2 m_rotateAngle = vec2(0.0f, 0.0f);
 #pragma endregion
 
-
+#pragma region Light Source
+mat4 lightView(1.0f);
+mat4 lightProjection(1.0f);
+vec3 lightPosition = vec3(0.2f, 0.6f, 0.5f);
+// Shadow
+mat4 scale_bias_matrix = translate(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f)) * scale(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f));
+#pragma endregion
 
 void vsyncEnabled(GLFWwindow *window);
 void vsyncDisabled(GLFWwindow *window);
@@ -68,6 +69,7 @@ Terrain *m_terrain = nullptr;
 glm::vec3 m_airplanePosition;
 glm::mat4 m_airplaneRotMat;
 
+#pragma region Structure
 struct Shape
 {
 	GLuint vao;
@@ -87,8 +89,6 @@ struct Material
 	glm::vec4 ks;
 };
 
-#pragma region Default Loader
-// define a simple data structure for storing texture image raw data
 typedef struct TextureData
 {
 	TextureData() : width(0), height(0), data(0) {}
@@ -96,7 +96,9 @@ typedef struct TextureData
 	int height;
 	unsigned char* data;
 } TextureData;
+#pragma endregion
 
+#pragma region Default Loader
 // load a png image and return a TextureData structure with raw data
 // not limited to png format. works with any image format that is RGBA-32bit
 TextureData loadImg(const char* path)
@@ -133,709 +135,562 @@ void freeShaderSource(char** srcp)
 	delete srcp[0];
 	delete srcp;
 }
+
+void shaderLog(GLuint shader)
+{
+	GLint isCompiled = 0;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
+	if (isCompiled == GL_FALSE)
+	{
+		GLint maxLength = 0;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
+
+		// The maxLength includes the NULL character
+		GLchar* errorLog = new GLchar[maxLength];
+		glGetShaderInfoLog(shader, maxLength, &maxLength, &errorLog[0]);
+
+		printf("%s\n", errorLog);
+		delete[] errorLog;
+	}
+}
 #pragma endregion
 
-#pragma region Light Source
-mat4 lightView(1.0f);
-mat4 lightProjection(1.0f);
-vec3 lightPosition = vec3(0.2f, 0.6f, 0.5f);
-// Shadow
-mat4 scale_bias_matrix = translate(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f)) * scale(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f));
-#pragma endregion
+#pragma region Class Definition 
 
-
-
-#pragma region Airplane
-class class_airplane {
+#pragma region Airplane Class
+class AirplaneClass {
 public:
-	// Constructor
-	class_airplane() {}
+	// Constructor / Destructor
+	 AirplaneClass() {};
+    ~AirplaneClass() {};
+
 	// Struct
 	typedef struct struct_uniformID {
 		// vs
-		GLuint um4m;
-		GLuint um4v;
-		GLuint um4p;
-		GLuint um4Lightmvp;
+		GLint um4m;
+		GLint um4v;
+		GLint um4p;
+		GLint um4Lightmvp;
 		// fs
-		GLuint texLoc;
-		GLuint uv3Ambient;
-		GLuint uv3Specular;
-		GLuint uv3Diffuse;
-		GLuint ubPhongFlag;
+		GLint texLoc;
+		GLint uv3Ambient;
+		GLint uv3Specular;
+		GLint uv3Diffuse;
+		GLint ubPhongFlag;
 	};
 	typedef struct struct_matrix {
 		mat4 model = mat4(1.0f);
 		mat4 scale = mat4(1.0f);
 		mat4 rotate = mat4(1.0f);
 	};
-	// Variables
-	GLuint program;
+
+private:
+    GLuint programID;
+    // struct_uniformID uniformID;
+    struct_matrix matrix;
+    vector<Shape> shapes;
+    vector<Material> materials;
+
+public:
+    bool blinnPhongFlag;
 	struct_uniformID uniformID;
-	struct_matrix matrix;
-	vector<Shape> shapes;
-	vector<Material> materials;
 
-	bool blinnPhongFlag;
+private:
+    void loadModel();
+    void getUniformLocation();
+	void linkProgram();
 
-	// Setting Functions
-	void linkProgram() {
-		// Create Shader Program
-		this->program = glCreateProgram();
-		// Create customize shader by tell openGL specify shader type 
-		GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-		GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-		// Load shader file
-		char** vs_source = loadShaderSource(".\\assets\\airplane_vertex.vs.glsl");
-		char** fs_source = loadShaderSource(".\\assets\\airplane_fragment.fs.glsl");
-		// Assign content of these shader files to those shaders we created before
-		glShaderSource(vs, 1, vs_source, NULL);
-		glShaderSource(fs, 1, fs_source, NULL);
-		// Free the shader file string(won't be used any more)
-		freeShaderSource(vs_source);
-		freeShaderSource(fs_source);
-		// Compile these shaders
-		glCompileShader(vs);
-		glCompileShader(fs);
-		// Assign the program we created before with these shaders
-		glAttachShader(this->program, vs);
-		glAttachShader(this->program, fs);
-		glLinkProgram(this->program);
-	}
+public:
+	void initial(mat4 _rotateMatrix, vec3 _position);
+    void render();
+};
 
-	void uniformLocation() {
-		// vs
-		this->uniformID.um4m = glGetUniformLocation(this->program, "um4m");
-		this->uniformID.um4v = glGetUniformLocation(this->program, "um4v");
-		this->uniformID.um4p = glGetUniformLocation(this->program, "um4p");
-		this->uniformID.um4Lightmvp = glGetUniformLocation(this->program, "um4Lightmvp");
-		// fs
-		this->uniformID.texLoc = glGetUniformLocation(this->program, "tex");
-		this->uniformID.ubPhongFlag = glGetUniformLocation(this->program, "ubPhongFlag");
-		this->uniformID.uv3Ambient = glGetUniformLocation(this->program, "uv3Ambient");
-		this->uniformID.uv3Specular = glGetUniformLocation(this->program, "uv3Specular");
-		this->uniformID.uv3Diffuse = glGetUniformLocation(this->program, "uv3Diffuse");
-	}
-
-	void loadModel() {
-		char* filepath = ".\\models\\airplane.obj";
-		const aiScene* scene = aiImportFile(filepath, aiProcessPreset_TargetRealtime_MaxQuality);
-		
-		// Material
-		for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
-		{
-			aiMaterial* material = scene->mMaterials[i];
-			Material Material;
-			aiString texturePath;
-			aiColor3D color;
-			if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS)
-			{
-				// load width, height and data from texturePath.C_Str();
-				//string p = ".\\models\\"; /*..\\Assets\\*/
-				//texturePath = p + texturePath.C_Str();
-				cout << texturePath.C_Str() << endl;
-				TextureData tex = loadImg(texturePath.C_Str());
-				glGenTextures(1, &Material.diffuse_tex);
-				glBindTexture(GL_TEXTURE_2D, Material.diffuse_tex);
-				//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
-				glGenerateMipmap(GL_TEXTURE_2D);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			}
-			material->Get(AI_MATKEY_COLOR_AMBIENT, color);
+void AirplaneClass::loadModel() {
+    char* filepath = ".\\models\\airplane.obj";
+    const aiScene* scene = aiImportFile(filepath, aiProcessPreset_TargetRealtime_MaxQuality);
+    
+    // Material
+    for (unsigned int i = 0; i < scene->mNumMaterials; ++i) {
+        aiMaterial* material = scene->mMaterials[i];
+		Material Material;
+        aiString texturePath;
+        aiColor3D color;
+        if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS) {
+            // load width, height and data from texturePath.C_Str();
+            //string p = ".\\models\\"; /*..\\Assets\\*/
+            //texturePath = p + texturePath.C_Str();
+            cout << texturePath.C_Str() << endl;
+            TextureData tex = loadImg(texturePath.C_Str());
+            glGenTextures(1, &Material.diffuse_tex);
+            glBindTexture(GL_TEXTURE_2D, Material.diffuse_tex);
+            //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        }
+		else {
+			cout << "no texture or mtl loading failed" << endl;
+		}
+        if(material->Get(AI_MATKEY_COLOR_AMBIENT, color) == aiReturn_SUCCESS){
 			Material.ka = glm::vec4(color.r, color.g, color.b, 1.0f);
-			material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
-			Material.kd = glm::vec4(color.r, color.g, color.b, 1.0f);
-			material->Get(AI_MATKEY_COLOR_SPECULAR, color);
-			Material.ks = glm::vec4(color.r, color.g, color.b, 1.0f);
-			// save material
-			this->materials.push_back(Material);
-		}
-		// Geometry
-		for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
-		{
-			aiMesh* mesh = scene->mMeshes[i];
-			Shape shape;
-			glGenVertexArrays(1, &shape.vao);
-			glBindVertexArray(shape.vao);
-		
-			vector<float> position;
-			vector<float> normal;
-			vector<float> texcoord;
-			for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
-			{
-				// mesh->mVertices[v][0~2] => position
-				position.push_back(mesh->mVertices[v][0]);
-				position.push_back(mesh->mVertices[v][1]);
-				position.push_back(mesh->mVertices[v][2]);
-				// mesh->mTextureCoords[0][v][0~1] => texcoord
-				texcoord.push_back(mesh->mTextureCoords[0][v][0]);
-				texcoord.push_back(mesh->mTextureCoords[0][v][1]);
-				// mesh->mNormals[v][0~2] => normal
-				normal.push_back(mesh->mNormals[v][0]);
-				normal.push_back(mesh->mNormals[v][1]);
-				normal.push_back(mesh->mNormals[v][2]);
-			}
-		
-			// create 3 vbos to hold data
-			glGenBuffers(1, &shape.vbo_position);
-			glGenBuffers(1, &shape.vbo_texcoord);
-			glGenBuffers(1, &shape.vbo_normal);
-
-			// position
-			glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
-			glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &position[0], GL_STATIC_DRAW);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-			glEnableVertexAttribArray(0);
-		
-			// texcoord
-			glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
-			glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 2 * sizeof(GL_FLOAT), &texcoord[0], GL_STATIC_DRAW);
-			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
-			glEnableVertexAttribArray(1);
-		
-			// normal
-			glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
-			glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &normal[0], GL_STATIC_DRAW);
-			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
-			glEnableVertexAttribArray(2);
-		
-			vector<unsigned int> face;
-			for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
-			{
-				// mesh->mFaces[f].mIndices[0~2] => index
-				face.push_back(mesh->mFaces[f].mIndices[0]);
-				face.push_back(mesh->mFaces[f].mIndices[1]);
-				face.push_back(mesh->mFaces[f].mIndices[2]);
-			}
-			// create 1 ibo to hold data
-			glGenBuffers(1, &shape.ibo);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->mNumFaces * 3 * sizeof(unsigned int), &face[0], GL_STATIC_DRAW);
-		
-			shape.materialID = mesh->mMaterialIndex;
-			shape.drawCount = mesh->mNumFaces * 3;
-			// save shape
-			this->shapes.push_back(shape);
-		
-			position.clear();
-			position.shrink_to_fit();
-			texcoord.clear();
-			texcoord.shrink_to_fit();
-			normal.clear();
-			normal.shrink_to_fit();
-			face.clear();
-			face.shrink_to_fit();
-		}
-		
-		aiReleaseImport(scene);
-		cout << "Load airplane.obj done" << endl;
-	}
-
-	void passUniformData(int blinnPhongFlag) {
-		// vs
-		glUniformMatrix4fv(this->uniformID.um4m, 1, GL_FALSE, value_ptr(this->matrix.model * this->matrix.rotate));
-		glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(m_eye, m_lookAtCenter, m_upDirection)));
-		glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(m_cameraProjection));
-		glUniformMatrix4fv(this->uniformID.um4Lightmvp, 1, GL_FALSE, value_ptr(scale_bias_matrix * lightProjection * lightView * this->matrix.model * this->matrix.scale * this->matrix.rotate));
-		// fs
-		glUniform1i(this->uniformID.texLoc, 3);
-		for (int i = 0; i < this->shapes.size(); i++) {
-			int materialID = this->shapes[i].materialID;
-			glUniform3fv(this->uniformID.uv3Ambient, 1, value_ptr(this->materials[materialID].ka));
-			glUniform3fv(this->uniformID.uv3Specular, 1, value_ptr(this->materials[materialID].ks));
-			glUniform3fv(this->uniformID.uv3Diffuse, 1, value_ptr(this->materials[materialID].kd));
-		}
-		glUniform1i(this->uniformID.ubPhongFlag, blinnPhongFlag);
-	}
-
-	void initial() {
-		GLfloat move = 20.0;
-		//this->matrix.model = rotate(mat4(1.0f), radians(move), m_airplanePosition);
-		//this->matrix.model = translate(mat4(1.0f), vec3(0.0, 0.0, 0.0));
-		//this->matrix.model = translate(mat4(1.0f), vec3(200.0, 70.0, 100.0));
-		//this->matrix.model = mat4(1.0f);
-		
-		this->matrix.rotate = m_airplaneRotMat;
-		this->matrix.model = translate(mat4(1.0f), m_airplanePosition);// *this->matrix.rotate;
-		this->blinnPhongFlag = false;
-
-		this->loadModel();
-		this->linkProgram();
-		cout << "program " << this->program << endl;
-		this->uniformLocation();
-	}
-
-	void render() {
-		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-		//glClearColor(1.0f, 0.5f, 1.0f, 1.0f);
-		glUseProgram(this->program);
-		this->matrix.rotate = m_airplaneRotMat;
-		this->matrix.model = translate(mat4(1.0f), m_airplanePosition);
-		if (this->blinnPhongFlag) {
-			this->passUniformData(1);
 		}
 		else {
-			this->passUniformData(0);
+			cout << "no ambient" << endl;
 		}
-		/*glActiveTexture(GL_TEXTURE3);*/
-		for (int i = 0; i < this->shapes.size(); i++) {
-			glBindVertexArray(this->shapes[i].vao);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->shapes[i].ibo);
-			int materialID = this->shapes[i].materialID;
-			glActiveTexture(GL_TEXTURE3);
-			glBindTexture(GL_TEXTURE_2D, this->materials[materialID].diffuse_tex);
-			glDrawElements(GL_TRIANGLES, this->shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+		if(material->Get(AI_MATKEY_COLOR_DIFFUSE, color) == aiReturn_SUCCESS){
+			Material.kd = glm::vec4(color.r, color.g, color.b, 1.0f);
 		}
+		else {
+			cout << "no diffuse" << endl;
+		}
+		if(material->Get(AI_MATKEY_COLOR_SPECULAR, color) == aiReturn_SUCCESS){
+			Material.ks = glm::vec4(color.r, color.g, color.b, 1.0f);
+		}
+		else {
+			cout << "no specular" << endl;
+		}
+        // save material
+        this->materials.push_back(Material);
+    }
+    // Geometry
+    for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+    {
+        aiMesh* mesh = scene->mMeshes[i];
+        Shape shape;
+        glGenVertexArrays(1, &shape.vao);
+        glBindVertexArray(shape.vao);
+    
+        vector<float> position;
+        vector<float> normal;
+        vector<float> texcoord;
+        for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
+        {
+            // mesh->mVertices[v][0~2] => position
+            position.push_back(mesh->mVertices[v][0]);
+            position.push_back(mesh->mVertices[v][1]);
+            position.push_back(mesh->mVertices[v][2]);
+            // mesh->mTextureCoords[0][v][0~1] => texcoord
+            texcoord.push_back(mesh->mTextureCoords[0][v][0]);
+            texcoord.push_back(mesh->mTextureCoords[0][v][1]);
+            // mesh->mNormals[v][0~2] => normal
+            normal.push_back(mesh->mNormals[v][0]);
+            normal.push_back(mesh->mNormals[v][1]);
+            normal.push_back(mesh->mNormals[v][2]);
+        }
+    
+        // create 3 vbos to hold data
+        glGenBuffers(1, &shape.vbo_position);
+        glGenBuffers(1, &shape.vbo_texcoord);
+        glGenBuffers(1, &shape.vbo_normal);
+
+        // position
+        glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
+        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &position[0], GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(0);
+    
+        // texcoord
+        glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
+        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 2 * sizeof(GL_FLOAT), &texcoord[0], GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(1);
+    
+        // normal
+        glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
+        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &normal[0], GL_STATIC_DRAW);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(2);
+    
+        vector<unsigned int> face;
+        for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
+        {
+            // mesh->mFaces[f].mIndices[0~2] => index
+            face.push_back(mesh->mFaces[f].mIndices[0]);
+            face.push_back(mesh->mFaces[f].mIndices[1]);
+            face.push_back(mesh->mFaces[f].mIndices[2]);
+        }
+        // create 1 ibo to hold data
+        glGenBuffers(1, &shape.ibo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->mNumFaces * 3 * sizeof(unsigned int), &face[0], GL_STATIC_DRAW);
+    
+        shape.materialID = mesh->mMaterialIndex;
+        shape.drawCount = mesh->mNumFaces * 3;
+        // save shape
+        this->shapes.push_back(shape);
+    
+        position.clear();
+        position.shrink_to_fit();
+        texcoord.clear();
+        texcoord.shrink_to_fit();
+        normal.clear();
+        normal.shrink_to_fit();
+        face.clear();
+        face.shrink_to_fit();
+    }
+    
+    aiReleaseImport(scene);
+    cout << "Load airplane.obj done" << endl;
+}
+
+void AirplaneClass::getUniformLocation() {
+    // vs
+	this->uniformID.um4m = glGetUniformLocation(this->programID, "um4m");
+	this->uniformID.um4v = glGetUniformLocation(this->programID, "um4v");
+	this->uniformID.um4p = glGetUniformLocation(this->programID, "um4p");
+	this->uniformID.um4Lightmvp = glGetUniformLocation(this->programID, "um4Lightmvp");
+	// fs
+	this->uniformID.texLoc = glGetUniformLocation(this->programID, "tex");
+	this->uniformID.ubPhongFlag = glGetUniformLocation(this->programID, "ubPhongFlag");
+	this->uniformID.uv3Ambient = glGetUniformLocation(this->programID, "uv3Ambient");
+	this->uniformID.uv3Specular = glGetUniformLocation(this->programID, "uv3Specular");
+	this->uniformID.uv3Diffuse = glGetUniformLocation(this->programID, "uv3Diffuse");
+}
+
+void AirplaneClass::linkProgram() {
+	// Create Shader Program
+	this->programID = glCreateProgram();
+	// Create customize shader by tell openGL specify shader type 
+	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+	// Load shader file
+	char** vs_source = loadShaderSource(".\\assets\\airplane_vertex.vs.glsl");
+	char** fs_source = loadShaderSource(".\\assets\\airplane_fragment.fs.glsl");
+	// Assign content of these shader files to those shaders we created before
+	glShaderSource(vs, 1, vs_source, NULL);
+	glShaderSource(fs, 1, fs_source, NULL);
+	// Free the shader file string(won't be used any more)
+	freeShaderSource(vs_source);
+	freeShaderSource(fs_source);
+	// Compile these shaders
+	glCompileShader(vs);
+	glCompileShader(fs);
+	// Logging
+	shaderLog(vs);
+	shaderLog(fs);
+	// Assign the program we created before with these shaders
+	glAttachShader(this->programID, vs);
+	glAttachShader(this->programID, fs);
+	glLinkProgram(this->programID);
+	// It is not required to hande the shader in memory
+   	glDeleteShader(vs);
+   	glDeleteShader(fs);
+}
+
+void AirplaneClass::initial(mat4 _rotateMatrix, vec3 _position) {
+	this->matrix.rotate = _rotateMatrix;
+    this->matrix.model = translate(mat4(1.0f), _position);
+    this->blinnPhongFlag = false;
+	this->linkProgram();
+	this->getUniformLocation();
+    this->loadModel();
+}
+
+void AirplaneClass::render() {
+   	this->matrix.rotate = m_airplaneRotMat;
+	this->matrix.model = translate(mat4(1.0f), m_airplanePosition);
+
+	glUseProgram(this->programID);
+	// vs
+	glUniformMatrix4fv(this->uniformID.um4m, 1, GL_FALSE, value_ptr(this->matrix.model * this->matrix.rotate));
+	glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(m_cameraView));
+	glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(m_cameraProjection));
+	glUniformMatrix4fv(this->uniformID.um4Lightmvp, 1, GL_FALSE, value_ptr(scale_bias_matrix * lightProjection * lightView * this->matrix.model * this->matrix.scale * this->matrix.rotate));
+	// fs
+	glUniform1i(this->uniformID.ubPhongFlag, (this->blinnPhongFlag) ? 1 : 0);
+	
+	glUniform1i(this->uniformID.texLoc, 3);
+	glActiveTexture(GL_TEXTURE3);
+	for (int i = 0; i < this->shapes.size(); i++) {
+		int materialID = this->shapes[i].materialID;
+		
+		glUniform3fv(this->uniformID.uv3Ambient, 1, value_ptr(this->materials[materialID].ka));
+		glUniform3fv(this->uniformID.uv3Specular, 1, value_ptr(this->materials[materialID].ks));
+		glUniform3fv(this->uniformID.uv3Diffuse, 1, value_ptr(this->materials[materialID].kd));
+		
+		glBindVertexArray(this->shapes[i].vao);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->shapes[i].ibo);
+		glBindTexture(GL_TEXTURE_2D, this->materials[materialID].diffuse_tex);
+		glDrawElements(GL_TRIANGLES, this->shapes[i].drawCount, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
-		//glUseProgram(0);
 	}
-};
-class_airplane m_airplane;
+	glUseProgram(0);
+	glBindVertexArray(0);
+}
 #pragma endregion
 
 #pragma region House
-class class_house {
+class HouseClass {
 public:
-	// Constructor
-	class_house() {}
+	// Constructor / Destructor
+	 HouseClass() {};
+    ~HouseClass() {};
+
 	// Struct
 	typedef struct struct_uniformID {
 		// vs
-		GLuint um4m;
-		GLuint um4v;
-		GLuint um4p;
-		GLuint um4Lightmvp;
+		GLint um4m;
+		GLint um4v;
+		GLint um4p;
+		GLint um4Lightmvp;
 		// fs
-		GLuint texLoc;
-		GLuint uv3Ambient;
-		GLuint uv3Specular;
-		GLuint uv3Diffuse;
-		GLuint ubPhongFlag;
+		GLint texLoc;
+		GLint uv3Ambient;
+		GLint uv3Specular;
+		GLint uv3Diffuse;
+		GLint ubPhongFlag;
 	};
 	typedef struct struct_matrix {
 		mat4 model = mat4(1.0f);
 		mat4 scale = mat4(1.0f);
 		mat4 rotate = mat4(1.0f);
 	};
-	// Variables
-	GLuint program;
-	struct_uniformID uniformID;
-	struct_matrix matrix;
-	vector<Shape> shapes;
-	vector<Material> materials;
 
-	bool blinnPhongFlag;
-	float rotateAngle;
-	vec3 position;
+private:
+    GLuint programID;
+    struct_uniformID uniformID;
+    struct_matrix matrix;
+    vector<Shape> shapes;
+    vector<Material> materials;
 
-	// Setting Functions
-	void linkProgram() {
-		// Create Shader Program
-		this->program = glCreateProgram();
-		// Create customize shader by tell openGL specify shader type 
-		GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-		GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-		// Load shader file
-		char** vs_source = loadShaderSource(".\\assets\\house_vertex.vs.glsl");
-		char** fs_source = loadShaderSource(".\\assets\\house_fragment.fs.glsl");
-		// Assign content of these shader files to those shaders we created before
-		glShaderSource(vs, 1, vs_source, NULL);
-		glShaderSource(fs, 1, fs_source, NULL);
-		// Free the shader file string(won't be used any more)
-		freeShaderSource(vs_source);
-		freeShaderSource(fs_source);
-		// Compile these shaders
-		glCompileShader(vs);
-		glCompileShader(fs);
-		// Assign the program we created before with these shaders
-		glAttachShader(this->program, vs);
-		glAttachShader(this->program, fs);
-		glLinkProgram(this->program);
-	}
-	void uniformLocation() {
-		// vs
-		this->uniformID.um4m = glGetUniformLocation(this->program, "um4m");
-		this->uniformID.um4v = glGetUniformLocation(this->program, "um4v");
-		this->uniformID.um4p = glGetUniformLocation(this->program, "um4p");
-		this->uniformID.um4Lightmvp = glGetUniformLocation(this->program, "um4Lightmvp");
-		// fs
-		this->uniformID.texLoc = glGetUniformLocation(this->program, "tex");
-		this->uniformID.ubPhongFlag = glGetUniformLocation(this->program, "ubPhongFlag");
-		this->uniformID.uv3Ambient = glGetUniformLocation(this->program, "uv3Ambient");
-		this->uniformID.uv3Specular = glGetUniformLocation(this->program, "uv3Specular");
-		this->uniformID.uv3Diffuse = glGetUniformLocation(this->program, "uv3Diffuse");
-	}
-	void loadModel() {
-		char* filepath = ".\\models\\medievalHouse.obj";
-		const aiScene* scene = aiImportFile(filepath, aiProcessPreset_TargetRealtime_MaxQuality);
+public:
+    bool blinnPhongFlag;
 
-		// Material
-		for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
-		{
-			aiMaterial* material = scene->mMaterials[i];
-			Material Material;
-			aiString texturePath;
-			aiColor3D color;
-			if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS)
-			{
-				// load width, height and data from texturePath.C_Str();
-				//string p = ".\\models\\"; /*..\\Assets\\*/
-				//texturePath = p + texturePath.C_Str();
-				cout << texturePath.C_Str() << endl;
-				TextureData tex = loadImg(texturePath.C_Str());
-				glGenTextures(1, &Material.diffuse_tex);
-				glBindTexture(GL_TEXTURE_2D, Material.diffuse_tex);
-				//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
-				glGenerateMipmap(GL_TEXTURE_2D);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			}
-			material->Get(AI_MATKEY_COLOR_AMBIENT, color);
+private:
+    void loadModel();
+    void getUniformLocation();
+	void linkProgram();
+
+public:
+	void initial(float _rotateAngle, vec3 _position);
+    void render();
+};
+
+void HouseClass::loadModel() {
+	char* filepath = ".\\models\\medievalHouse.obj";
+    const aiScene* scene = aiImportFile(filepath, aiProcessPreset_TargetRealtime_MaxQuality);
+    
+    // Material
+    for (unsigned int i = 0; i < scene->mNumMaterials; ++i) {
+        aiMaterial* material = scene->mMaterials[i];
+		Material Material;
+        aiString texturePath;
+        aiColor3D color;
+        if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS) {
+            // load width, height and data from texturePath.C_Str();
+            //string p = ".\\models\\"; /*..\\Assets\\*/
+            //texturePath = p + texturePath.C_Str();
+            cout << texturePath.C_Str() << endl;
+            TextureData tex = loadImg(texturePath.C_Str());
+            glGenTextures(1, &Material.diffuse_tex);
+            glBindTexture(GL_TEXTURE_2D, Material.diffuse_tex);
+            //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        }
+		else {
+			cout << "no texture or mtl loading failed" << endl;
+		}
+        if(material->Get(AI_MATKEY_COLOR_AMBIENT, color) == aiReturn_SUCCESS){
 			Material.ka = glm::vec4(color.r, color.g, color.b, 1.0f);
-			material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
-			Material.kd = glm::vec4(color.r, color.g, color.b, 1.0f);
-			material->Get(AI_MATKEY_COLOR_SPECULAR, color);
-			Material.ks = glm::vec4(color.r, color.g, color.b, 1.0f);
-			// save material
-			this->materials.push_back(Material);
-		}
-		// Geometry
-		for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
-		{
-			aiMesh* mesh = scene->mMeshes[i];
-			Shape shape;
-			glGenVertexArrays(1, &shape.vao);
-			glBindVertexArray(shape.vao);
-
-			vector<float> position;
-			vector<float> normal;
-			vector<float> texcoord;
-			for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
-			{
-				// mesh->mVertices[v][0~2] => position
-				position.push_back(mesh->mVertices[v][0]);
-				position.push_back(mesh->mVertices[v][1]);
-				position.push_back(mesh->mVertices[v][2]);
-				// mesh->mTextureCoords[0][v][0~1] => texcoord
-				texcoord.push_back(mesh->mTextureCoords[0][v][0]);
-				texcoord.push_back(mesh->mTextureCoords[0][v][1]);
-				// mesh->mNormals[v][0~2] => normal
-				normal.push_back(mesh->mNormals[v][0]);
-				normal.push_back(mesh->mNormals[v][1]);
-				normal.push_back(mesh->mNormals[v][2]);
-			}
-
-			// create 3 vbos to hold data
-			glGenBuffers(1, &shape.vbo_position);
-			glGenBuffers(1, &shape.vbo_texcoord);
-			glGenBuffers(1, &shape.vbo_normal);
-
-			// position
-			glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
-			glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &position[0], GL_STATIC_DRAW);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-			glEnableVertexAttribArray(0);
-
-			// texcoord
-			glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
-			glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 2 * sizeof(GL_FLOAT), &texcoord[0], GL_STATIC_DRAW);
-			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
-			glEnableVertexAttribArray(1);
-
-			// normal
-			glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
-			glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &normal[0], GL_STATIC_DRAW);
-			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
-			glEnableVertexAttribArray(2);
-
-			vector<unsigned int> face;
-			for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
-			{
-				// mesh->mFaces[f].mIndices[0~2] => index
-				face.push_back(mesh->mFaces[f].mIndices[0]);
-				face.push_back(mesh->mFaces[f].mIndices[1]);
-				face.push_back(mesh->mFaces[f].mIndices[2]);
-			}
-			// create 1 ibo to hold data
-			glGenBuffers(1, &shape.ibo);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->mNumFaces * 3 * sizeof(unsigned int), &face[0], GL_STATIC_DRAW);
-
-			shape.materialID = mesh->mMaterialIndex;
-			shape.drawCount = mesh->mNumFaces * 3;
-			// save shape
-			this->shapes.push_back(shape);
-
-			position.clear();
-			position.shrink_to_fit();
-			texcoord.clear();
-			texcoord.shrink_to_fit();
-			normal.clear();
-			normal.shrink_to_fit();
-			face.clear();
-			face.shrink_to_fit();
-		}
-
-		aiReleaseImport(scene);
-		cout << "Load medievalHouse.obj done" << endl;
-	}
-
-	void passUniformData(int blinnPhongFlag) {
-		// vs
-		glUniformMatrix4fv(this->uniformID.um4m, 1, GL_FALSE, value_ptr(this->matrix.model * this->matrix.rotate));
-		glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(lookAt(m_eye, m_lookAtCenter, m_upDirection)));
-		glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(m_cameraProjection));
-		glUniformMatrix4fv(this->uniformID.um4Lightmvp, 1, GL_FALSE, value_ptr(scale_bias_matrix * lightProjection * lightView * this->matrix.model * this->matrix.scale * this->matrix.rotate));
-		// fs
-		glUniform1i(this->uniformID.texLoc, 3);
-		for (int i = 0; i < this->shapes.size(); i++) {
-			int materialID = this->shapes[i].materialID;
-			glUniform3fv(this->uniformID.uv3Ambient, 1, value_ptr(this->materials[materialID].ka));
-			glUniform3fv(this->uniformID.uv3Specular, 1, value_ptr(this->materials[materialID].ks));
-			glUniform3fv(this->uniformID.uv3Diffuse, 1, value_ptr(this->materials[materialID].kd));
-		}
-		glUniform1i(this->uniformID.ubPhongFlag, blinnPhongFlag);
-	}
-
-	void initial(float _rotateAngle, vec3 _position) {
-		this->rotateAngle = _rotateAngle;
-		this->position = _position;
-		this->matrix.rotate = rotate(mat4(1.0f), radians(this->rotateAngle), vec3(0.0f, 1.0f, 0.0f));
-		this->matrix.model = translate(mat4(1.0f), this->position);
-		this->blinnPhongFlag = false;
-		
-		this->loadModel();
-		this->linkProgram();
-		cout << "program " << this->program << endl;
-		this->uniformLocation();
-	}
-
-	void render() {
-		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-		//glClearColor(1.0f, 0.5f, 1.0f, 1.0f);
-		glUseProgram(this->program);
-		if (this->blinnPhongFlag) {
-			this->passUniformData(1);
 		}
 		else {
-			this->passUniformData(0);
+			cout << "no ambient" << endl;
 		}
-		/*glActiveTexture(GL_TEXTURE3);*/
-		for (int i = 0; i < this->shapes.size(); i++) {
-			glBindVertexArray(this->shapes[i].vao);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->shapes[i].ibo);
-			int materialID = this->shapes[i].materialID;
-			glActiveTexture(GL_TEXTURE3);
-			glBindTexture(GL_TEXTURE_2D, this->materials[materialID].diffuse_tex);
-			glDrawElements(GL_TRIANGLES, this->shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+		if(material->Get(AI_MATKEY_COLOR_DIFFUSE, color) == aiReturn_SUCCESS){
+			Material.kd = glm::vec4(color.r, color.g, color.b, 1.0f);
 		}
+		else {
+			cout << "no diffuse" << endl;
+		}
+		if(material->Get(AI_MATKEY_COLOR_SPECULAR, color) == aiReturn_SUCCESS){
+			Material.ks = glm::vec4(color.r, color.g, color.b, 1.0f);
+		}
+		else {
+			cout << "no specular" << endl;
+		}
+        // save material
+        this->materials.push_back(Material);
+    }
+    // Geometry
+    for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+    {
+        aiMesh* mesh = scene->mMeshes[i];
+        Shape shape;
+        glGenVertexArrays(1, &shape.vao);
+        glBindVertexArray(shape.vao);
+    
+        vector<float> position;
+        vector<float> normal;
+        vector<float> texcoord;
+        for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
+        {
+            // mesh->mVertices[v][0~2] => position
+            position.push_back(mesh->mVertices[v][0]);
+            position.push_back(mesh->mVertices[v][1]);
+            position.push_back(mesh->mVertices[v][2]);
+            // mesh->mTextureCoords[0][v][0~1] => texcoord
+            texcoord.push_back(mesh->mTextureCoords[0][v][0]);
+            texcoord.push_back(mesh->mTextureCoords[0][v][1]);
+            // mesh->mNormals[v][0~2] => normal
+            normal.push_back(mesh->mNormals[v][0]);
+            normal.push_back(mesh->mNormals[v][1]);
+            normal.push_back(mesh->mNormals[v][2]);
+        }
+    
+        // create 3 vbos to hold data
+        glGenBuffers(1, &shape.vbo_position);
+        glGenBuffers(1, &shape.vbo_texcoord);
+        glGenBuffers(1, &shape.vbo_normal);
+
+        // position
+        glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
+        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &position[0], GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(0);
+    
+        // texcoord
+        glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
+        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 2 * sizeof(GL_FLOAT), &texcoord[0], GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(1);
+    
+        // normal
+        glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
+        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &normal[0], GL_STATIC_DRAW);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(2);
+    
+        vector<unsigned int> face;
+        for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
+        {
+            // mesh->mFaces[f].mIndices[0~2] => index
+            face.push_back(mesh->mFaces[f].mIndices[0]);
+            face.push_back(mesh->mFaces[f].mIndices[1]);
+            face.push_back(mesh->mFaces[f].mIndices[2]);
+        }
+        // create 1 ibo to hold data
+        glGenBuffers(1, &shape.ibo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->mNumFaces * 3 * sizeof(unsigned int), &face[0], GL_STATIC_DRAW);
+    
+        shape.materialID = mesh->mMaterialIndex;
+        shape.drawCount = mesh->mNumFaces * 3;
+        // save shape
+        this->shapes.push_back(shape);
+    
+        position.clear();
+        position.shrink_to_fit();
+        texcoord.clear();
+        texcoord.shrink_to_fit();
+        normal.clear();
+        normal.shrink_to_fit();
+        face.clear();
+        face.shrink_to_fit();
+    }
+    
+    aiReleaseImport(scene);
+    cout << "Load medievalHouse.obj done" << endl;
+}
+
+void HouseClass::getUniformLocation() {
+	// vs
+	this->uniformID.um4m = glGetUniformLocation(this->programID, "um4m");
+	this->uniformID.um4v = glGetUniformLocation(this->programID, "um4v");
+	this->uniformID.um4p = glGetUniformLocation(this->programID, "um4p");
+	this->uniformID.um4Lightmvp = glGetUniformLocation(this->programID, "um4Lightmvp");
+	// fs
+	this->uniformID.texLoc = glGetUniformLocation(this->programID, "tex");
+	this->uniformID.ubPhongFlag = glGetUniformLocation(this->programID, "ubPhongFlag");
+	this->uniformID.uv3Ambient = glGetUniformLocation(this->programID, "uv3Ambient");
+	this->uniformID.uv3Specular = glGetUniformLocation(this->programID, "uv3Specular");
+	this->uniformID.uv3Diffuse = glGetUniformLocation(this->programID, "uv3Diffuse");
+}
+
+void HouseClass::linkProgram() {
+	// Create Shader Program
+	this->programID = glCreateProgram();
+	// Create customize shader by tell openGL specify shader type 
+	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+	// Load shader file
+	char** vs_source = loadShaderSource(".\\assets\\house_vertex.vs.glsl");
+	char** fs_source = loadShaderSource(".\\assets\\house_fragment.fs.glsl");
+	// Assign content of these shader files to those shaders we created before
+	glShaderSource(vs, 1, vs_source, NULL);
+	glShaderSource(fs, 1, fs_source, NULL);
+	// Free the shader file string(won't be used any more)
+	freeShaderSource(vs_source);
+	freeShaderSource(fs_source);
+	// Compile these shaders
+	glCompileShader(vs);
+	glCompileShader(fs);
+	// Logging
+	shaderLog(vs);
+	shaderLog(fs);
+	// Assign the program we created before with these shaders
+	glAttachShader(this->programID, vs);
+	glAttachShader(this->programID, fs);
+	glLinkProgram(this->programID);
+	// It is not required to hande the shader in memory
+   	glDeleteShader(vs);
+   	glDeleteShader(fs);
+}
+
+void HouseClass::initial(float _rotateAngle, vec3 _position) {
+	this->matrix.rotate = rotate(mat4(1.0f), radians(_rotateAngle), vec3(0.0f, 1.0f, 0.0f));
+	this->matrix.model = translate(mat4(1.0f), _position);
+	this->blinnPhongFlag = false;
+	this->linkProgram();
+	this->getUniformLocation();
+    this->loadModel();
+}
+
+void HouseClass::render() {
+	glUseProgram(this->programID);
+	// vs
+	glUniformMatrix4fv(this->uniformID.um4m, 1, GL_FALSE, value_ptr(this->matrix.model * this->matrix.rotate));
+	glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(m_cameraView));
+	glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(m_cameraProjection));
+	glUniformMatrix4fv(this->uniformID.um4Lightmvp, 1, GL_FALSE, value_ptr(scale_bias_matrix * lightProjection * lightView * this->matrix.model * this->matrix.scale * this->matrix.rotate));
+	// fs
+	glUniform1i(this->uniformID.ubPhongFlag, (this->blinnPhongFlag) ? 1 : 0);
+	
+	glUniform1i(this->uniformID.texLoc, 3);
+	glActiveTexture(GL_TEXTURE3);
+	for (int i = 0; i < this->shapes.size(); i++) {
+		int materialID = this->shapes[i].materialID;
+		
+		glUniform3fv(this->uniformID.uv3Ambient, 1, value_ptr(this->materials[materialID].ka));
+		glUniform3fv(this->uniformID.uv3Specular, 1, value_ptr(this->materials[materialID].ks));
+		glUniform3fv(this->uniformID.uv3Diffuse, 1, value_ptr(this->materials[materialID].kd));
+		
+		glBindVertexArray(this->shapes[i].vao);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->shapes[i].ibo);
+		glBindTexture(GL_TEXTURE_2D, this->materials[materialID].diffuse_tex);
+		glDrawElements(GL_TRIANGLES, this->shapes[i].drawCount, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
-		//glUseProgram(0);
 	}
-};
-class_house m_houseA;
-class_house m_houseB;
+	glUseProgram(0);
+	glBindVertexArray(0);
+}
+
 #pragma endregion
 
-
-#pragma region Combination
-class class_combination {
-public:
-	// Constructor
-	class_combination() {}
-	// Struct
-	typedef struct struct_buffer {
-		GLuint fbo;
-		GLuint depthRBO;
-	};
-	// Variables
-	struct_buffer buffer;
-	GLuint texture;
-
-	// Functions
-	void setBuffer() {
-		// FBO
-		glDeleteFramebuffers(1, &this->buffer.fbo);
-		glGenFramebuffers(1, &this->buffer.fbo);
-		glBindFramebuffer(GL_FRAMEBUFFER, this->buffer.fbo);
-
-		glDeleteTextures(1, &this->texture);
-		glGenTextures(1, &this->texture);
-		glBindTexture(GL_TEXTURE_2D, this->texture);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->texture, 0);
-
-		// DepthRBO
-		glDeleteRenderbuffers(1, &this->buffer.depthRBO);
-		glGenRenderbuffers(1, &this->buffer.depthRBO);
-		glBindRenderbuffer(GL_RENDERBUFFER, this->buffer.depthRBO);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, FRAME_WIDTH, FRAME_HEIGHT);
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, this->buffer.depthRBO);
-
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		glBindRenderbuffer(GL_RENDERBUFFER, 0);
-	}
-
-	void framebufferRender() {
-		glBindFramebuffer(GL_FRAMEBUFFER, this->buffer.fbo);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-		glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
-
-		// Enable Depth Test
-		glEnable(GL_DEPTH_TEST);
-		glDisable(GL_STENCIL_TEST);
-
-		//m_renderer->renderPass();
-		m_airplane.render();
-	}
-};
-class_combination m_combination;
 #pragma endregion
 
-#pragma region Window Frame
-class class_windowFrame {
-public:
-	// Constructor
-	class_windowFrame() {}
-
-	// Struct
-	typedef struct struct_uniformID {
-		GLuint tex;
-	};
-	typedef struct struct_buffer {
-		GLuint vao;
-		GLuint vbo;
-	};
-
-	// Variable
-	GLuint program;
-	struct_uniformID unifromID;
-	struct_buffer buffer;
-
-	float window_positions[16] = {
-		 1.0f, -1.0f,  1.0f,  0.0f,
-		-1.0f, -1.0f,  0.0f,  0.0f,
-		-1.0f,  1.0f,  0.0f,  1.0f,
-		 1.0f,  1.0f,  1.0f,  1.0f
-	};
-
-	// Setting Functions
-	void linkProgram() {
-		// Create Shader Program
-		this->program = glCreateProgram();
-		// Create customize shader by tell openGL specify shader type 
-		GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-		GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-		// Load shader file
-		char** vs_source = loadShaderSource(".\\assets\\windowFrame_vertex.vs.glsl");
-		char** fs_source = loadShaderSource(".\\assets\\windowFrame_fragment.fs.glsl");
-		// Assign content of these shader files to those shaders we created before
-		glShaderSource(vs, 1, vs_source, NULL);
-		glShaderSource(fs, 1, fs_source, NULL);
-		// Free the shader file string(won't be used any more)
-		freeShaderSource(vs_source);
-		freeShaderSource(fs_source);
-		// Compile these shaders
-		glCompileShader(vs);
-		glCompileShader(fs);
-		// Assign the program we created before with these shaders
-		glAttachShader(this->program, vs);
-		glAttachShader(this->program, fs);
-		glLinkProgram(this->program);
-	}
-
-	void uniformLocation() {
-		this->unifromID.tex = glGetUniformLocation(this->program, "text");
-	}
-
-	void setBuffer() {
-		glGenVertexArrays(1, &this->buffer.vao);
-		glBindVertexArray(this->buffer.vao);
-
-		glGenBuffers(1, &this->buffer.vbo);
-		glBindBuffer(GL_ARRAY_BUFFER, this->buffer.vbo);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(this->window_positions), this->window_positions, GL_STATIC_DRAW);
-
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, 0);
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, (const GLvoid*)(sizeof(GL_FLOAT) * 2));
-		glEnableVertexAttribArray(1);
-
-		glBindVertexArray(0);
-		glBindBuffer(GL_VERTEX_ARRAY, 0);
-	}
-
-	void passUniformData() {
-		glUniform1i(this->unifromID.tex, 3);
-	}
-
-	void initial() {
-		this->linkProgram();
-		this->uniformLocation();
-		this->setBuffer();
-	}
-
-	void render() {
-		glUseProgram(this->program);
-		this->passUniformData();
-		glBindVertexArray(this->buffer.vao);
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, m_combination.texture);
-
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-	}
-};
-class_windowFrame m_windowFrame;
-#pragma endregion
-
-
-#pragma region GUI
-//TwBar* bar;
-//
-////void TW_CALL SSAO_Switch(void* clientData)
-////{
-////	ssaoEffect.ssaoSwitch = !ssaoEffect.ssaoSwitch;
-////
-////}
-//void TW_CALL blinnPhongChange(void* clientData) {
-//	m_airplane_PhongFlag = !m_airplane_PhongFlag;
-//}
-//
-//void setupGUI() {
-//	// Initialize AntTweakBar
-//	//TwDefine(" GLOBAL fontscaling=2 ");
-//#ifdef _MSC_VER
-//	TwInit(TW_OPENGL, NULL);
-//#else
-//	TwInit(TW_OPENGL_CORE, NULL);
-//#endif
-//	//TwGLUTModifiersFunc(glutGetModifiers);
-//	bar = TwNewBar("Properties");
-//	TwDefine(" Properties size='300 220' ");
-//	TwDefine(" Properties fontsize='3' color='0 0 0' alpha=180 ");
-//
-//	//TwAddButton(bar, "SSAO_SWITH", SSAO_Switch, NULL, " label='SSAO_SWITCH' ");
-//	/*TwAddVarRW(bar, "LightPosition_x", TW_TYPE_FLOAT, &(light_position.x), "label='Light Position.x'");
-//	TwAddVarRW(bar, "LightPosition_y", TW_TYPE_FLOAT, &(light_position.y), "label='Light Position.y'");
-//	TwAddVarRW(bar, "LightPosition_z", TW_TYPE_FLOAT, &(light_position.z), "label='Light Position.z'");*/
-//	TwAddButton(bar, "BlinnPhong", blinnPhongChange, NULL, " label='BlinnPhong' ");/*
-//	TwAddButton(bar, "particle", particleChange, NULL, "label = 'Particle'");*/
-//}
-#pragma endregion
+AirplaneClass m_airplane;
+HouseClass m_houseA;
+HouseClass m_houseB;
 
 int main() {
 	glfwInit();
@@ -859,10 +714,12 @@ int main() {
 		return -1;
 	}
 
+
+
 	glfwSetKeyCallback(window, keyCallback);
 	glfwSetScrollCallback(window, mouseScrollCallback);
-	glfwSetCursorPosCallback(window, cursorPosCallback);
 	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+	glfwSetCursorPosCallback(window, cursorPosCallback);
 	glfwSetFramebufferSizeCallback(window, resizeGL);
 
 	initializeGL();
@@ -936,22 +793,21 @@ void initializeGL() {
 	m_lookDirection = m_lookAtCenter - m_eye;
 
 	initScene();
-	m_airplane.initial();
+	m_airplane.initial(m_airplaneRotMat, m_airplanePosition);
 	m_houseA.initial(60.0f, vec3(631.0f, 130.0f, 468.0f));
 	m_houseB.initial(15.0f, vec3(656.0f, 135.0f, 483.0f));
-	//m_windowFrame.initial();
-	//m_combination.setBuffer();
-	m_renderer->setProjection(glm::perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f));
-	m_cameraProjection = perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f);
-}
 
+	m_cameraProjection = perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f);
+	m_renderer->setProjection(m_cameraProjection);
+}
 void resizeGL(GLFWwindow *window, int w, int h) {
 	FRAME_WIDTH = w;
 	FRAME_HEIGHT = h;
 	m_renderer->resize(w, h);
-	m_renderer->setProjection(glm::perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f));
 	m_cameraProjection = perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f);
+	m_renderer->setProjection(m_cameraProjection);
 }
+
 
 void updateState() {
 	// [TODO] update your eye position and look-at center here
@@ -968,30 +824,26 @@ void updateState() {
 	adjustCameraPositionWithTerrain();
 
 	// calculate camera matrix
-	//glm::mat4 vm = glm::lookAt(m_eye, m_lookAtCenter, glm::vec3(0.0, 1.0, 0.0));
-	mat4 vm = lookAt(m_eye, m_lookAtCenter, m_upDirection);
+	m_cameraView = lookAt(m_eye, m_lookAtCenter, m_upDirection);
 
 	// [IMPORTANT] set camera information to renderer
-	m_renderer->setView(vm, m_eye);
+	m_renderer->setView(m_cameraView, m_eye);
 
 	// update airplane
-	updateAirplane(vm);
+	updateAirplane(m_cameraView);
 }
 void paintGL() {
 	// render terrain
 	m_renderer->renderPass();
+	glUseProgram(0);
+	glBindVertexArray(0);
 
 	// [TODO] implement your rendering function here
-	//m_combination.framebufferRender();
-	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	//glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
-
-	//m_windowFrame.render();
+	// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	// glClearColor(0.0f, 1.0f, 1.0f, 1.0f);
 	m_airplane.render();
-	// m_houseA.render();
-	// m_houseB.render();
-	
+	m_houseA.render();
+	m_houseB.render();
 }
 
 ////////////////////////////////////////////////
@@ -1001,7 +853,7 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
 	{
 		if (button == GLFW_MOUSE_BUTTON_LEFT) {
 			m_leftButtonPressed = true;
-			m_leftButtonPressedFlag = true;
+			m_leftButtonPressedFirst = true;
 		}
 	}
 	else if (action == GLFW_RELEASE)
@@ -1012,18 +864,16 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
 		}
 	}
 #pragma endregion
-
 }
 void mouseScrollCallback(GLFWwindow *window, double xoffset, double yoffset) {}
 void cursorPosCallback(GLFWwindow* window, double x, double y) {
 	cursorPos[0] = x;
 	cursorPos[1] = y;
-	//cout << "Cursor at (" << x << ", " << y << ")" << endl;
 #pragma region Trackball
 	if (m_leftButtonPressed) {
-		if (m_leftButtonPressedFlag) {
+		if (m_leftButtonPressedFirst) {
 			m_trackball_initial = vec2(cursorPos[0], cursorPos[1]);
-			m_leftButtonPressedFlag = false;
+			m_leftButtonPressedFirst = false;
 			cout << "Cursor Pressed at (" << x << ", " << y << ")" << endl;
 		}
 		// Update trackball_initial
@@ -1076,13 +926,30 @@ void cursorPosCallback(GLFWwindow* window, double x, double y) {
 		}
 	}
 #pragma endregion
-
 }
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	printf("\nKey %d is pressed ", key);
-	switch (key)
-	{
-#pragma region Trackball
+	if (GLFW_PRESS == action) {
+		printf("\nKey %d is pressed ", key);
+		switch (key)
+		{
+		case GLFW_KEY_Z:
+			m_airplane.blinnPhongFlag = !m_airplane.blinnPhongFlag;
+			m_houseA.blinnPhongFlag = !m_houseA.blinnPhongFlag;
+			m_houseB.blinnPhongFlag = !m_houseB.blinnPhongFlag;
+			if (m_airplane.blinnPhongFlag) {
+				cout << " True" << endl;
+			}
+			else {
+				cout << " False" << endl;
+			}
+			break;
+
+		default:
+			break;
+		}
+	}
+	#pragma region Trackball
+	switch(key) {	
 	case GLFW_KEY_W:
 		m_eye += normalize(m_lookDirection) * m_cameraMoveSpeed;
 		break;
@@ -1101,21 +968,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 	case GLFW_KEY_E:
 		m_eye += normalize(m_vAxis) * m_cameraMoveSpeed;
 		break;
-#pragma endregion
-
-	case GLFW_KEY_Z:
-		m_airplane.blinnPhongFlag = !m_airplane.blinnPhongFlag;
-		if (m_airplane.blinnPhongFlag) {
-			cout << "True" << endl;
-		}
-		else {
-			cout << "False" << endl;
-		}
-		break;
-	
 	default:
 		break;
 	}
+	#pragma endregion
 }
 ////////////////////////////////////////////////
 // The following functions don't need to change

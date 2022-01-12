@@ -1,1 +1,74 @@
-﻿  Rendering_Framework.vcxproj -> C:\Users\Frankie Fan\Desktop\CG\final\GPA_Final_Project_Outdoor\outdoor_framework\x64\Release\Rendering_Framework.exe
+﻿  main.cpp
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(210): warning C4091: 'typedef ': 當沒有宣告變數時，忽略 'AirplaneClass::struct_uniformID' 的左方
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(215): warning C4091: 'typedef ': 當沒有宣告變數時，忽略 'AirplaneClass::struct_matrix' 的左方
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(455): warning C4305: '正在初始化': 從 'double' 轉換為 'float'，是由較大的類型轉換為較小的類型，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(463): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(588): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(594): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(596): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(602): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(607): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(612): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(625): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(630): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(709): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(710): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(715): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(716): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+  SceneSetting.cpp
+  SceneRenderer.cpp
+  Shader.cpp
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\src\basic\shader.cpp(73): warning C4101: 'data': 未參考的區域變數
+  TextureMaterial.cpp
+  Transformation.cpp
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\src\basic\transformation.cpp(71): warning C4267: '正在初始化': 將 'size_t' 轉換為 'int'，資料可能遺失
+  Terrain.cpp
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\src\terrain.cpp(9): warning C4244: '正在初始化': 將 'float' 轉換為 'int'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\src\terrain.cpp(72): warning C4312: '類型轉換': 將 'int' 轉換為較大的 'GLvoid *'
+  glad.c
+  正在產生程式碼
+  0 of 730 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  已完成程式碼產生
+  Rendering_Framework.vcxproj -> C:\Users\Debbie\Desktop\NTHU\GPA\GPA_Final\GPA_Final_Project_Outdoor\outdoor_framework\x64\Release\Rendering_Framework.exe

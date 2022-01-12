@@ -1,38 +1,60 @@
 ﻿  main.cpp
-c:\program files (x86)\windows kits\10\include\10.0.19041.0\shared\minwindef.h(130): warning C4005: 'APIENTRY': 巨集重複定義
-  c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\externals\include\glad\glad.h(647): note: 請參閱 'APIENTRY' 之前的定義
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(393): warning C4305: '正在初始化': 從 'double' 轉換為 'float'，是由較大的類型轉換為較小的類型，可能導致資料遺失
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(401): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(542): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(182): warning C4091: 'typedef ': 當沒有宣告變數時，忽略 'AirplaneClass::struct_uniformID' 的左方
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(187): warning C4091: 'typedef ': 當沒有宣告變數時，忽略 'AirplaneClass::struct_matrix' 的左方
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(448): warning C4091: 'typedef ': 當沒有宣告變數時，忽略 'HouseClass::struct_uniformID' 的左方
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(453): warning C4091: 'typedef ': 當沒有宣告變數時，忽略 'HouseClass::struct_matrix' 的左方
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(738): warning C4305: '正在初始化': 從 'double' 轉換為 'float'，是由較大的類型轉換為較小的類型，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(746): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(881): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(887): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(543): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(889): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(895): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(548): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(900): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\main.cpp(549): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(905): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-  SceneSetting.cpp
-  SceneRenderer.cpp
-  Shader.cpp
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\src\basic\shader.cpp(73): warning C4101: 'data': 未參考的區域變數
-  TextureMaterial.cpp
-  Transformation.cpp
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\src\basic\transformation.cpp(71): warning C4267: '正在初始化': 將 'size_t' 轉換為 'int'，資料可能遺失
-  Terrain.cpp
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\src\terrain.cpp(9): warning C4244: '正在初始化': 將 'float' 轉換為 'int'，由於類型不同，可能導致資料遺失
-c:\users\debbie\desktop\nthu\gpa\gpa_final\outdoor_framework\rendering_framework\src\terrain.cpp(72): warning C4312: '類型轉換': 將 'int' 轉換為較大的 'GLvoid *'
-  正在產生程式碼...
-  glad.c
-LINK : fatal error LNK1104: 無法開啟檔案 'AntTweakBar64.lib'
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(918): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(923): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1007): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1008): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1013): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1014): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+          with
+          [
+              T=float
+          ]
+  Rendering_Framework.vcxproj -> C:\Users\Debbie\Desktop\NTHU\GPA\GPA_Final\GPA_Final_Project_Outdoor\outdoor_framework\x64\Debug\Rendering_Framework.exe
