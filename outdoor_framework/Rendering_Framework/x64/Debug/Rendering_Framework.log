@@ -1,58 +1,58 @@
 ﻿  main.cpp
 c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(178): warning C4091: 'typedef ': 當沒有宣告變數時，忽略 'AirplaneClass::struct_uniformID' 的左方
 c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(183): warning C4091: 'typedef ': 當沒有宣告變數時，忽略 'AirplaneClass::struct_matrix' 的左方
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(444): warning C4091: 'typedef ': 當沒有宣告變數時，忽略 'HouseClass::struct_uniformID' 的左方
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(449): warning C4091: 'typedef ': 當沒有宣告變數時，忽略 'HouseClass::struct_matrix' 的左方
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(904): warning C4305: '正在初始化': 從 'double' 轉換為 'float'，是由較大的類型轉換為較小的類型，可能導致資料遺失
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(912): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1059): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1065): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(445): warning C4091: 'typedef ': 當沒有宣告變數時，忽略 'HouseClass::struct_uniformID' 的左方
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(450): warning C4091: 'typedef ': 當沒有宣告變數時，忽略 'HouseClass::struct_matrix' 的左方
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(948): warning C4305: '正在初始化': 從 'double' 轉換為 'float'，是由較大的類型轉換為較小的類型，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(956): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1096): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1102): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1067): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1073): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1104): warning C4244: '正在初始化': 將 'double' 轉換為 'float'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1110): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1078): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1115): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1083): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1120): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1096): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1133): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1101): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1138): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1185): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1222): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1186): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1223): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1191): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1228): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float
           ]
-c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1192): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
+c:\users\debbie\desktop\nthu\gpa\gpa_final\gpa_final_project_outdoor\outdoor_framework\rendering_framework\main.cpp(1229): warning C4244: '=': 將 'double' 轉換為 'T'，由於類型不同，可能導致資料遺失
           with
           [
               T=float

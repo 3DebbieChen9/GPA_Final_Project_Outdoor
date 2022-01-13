@@ -33,6 +33,7 @@ void SceneRenderer::initialize(const int w, const int h){
 	this->setUpShader();	
 
 	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 void SceneRenderer::setProjection(const glm::mat4 &proj){

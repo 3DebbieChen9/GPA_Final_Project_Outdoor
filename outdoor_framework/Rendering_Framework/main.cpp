@@ -383,6 +383,7 @@ void AirplaneClass::initial(mat4 _rotateMatrix, vec3 _position) {
     this->matrix.model = translate(mat4(1.0f), _position);
     this->blinnPhongFlag = false;
 	this->linkProgram();
+	cout << this->programID << endl;
 	this->getUniformLocation();
     this->loadModel();
 }
@@ -731,7 +732,7 @@ void FrameBufferClass::setBuffer() { // Need to be called in Reshape
 }
 
 void FrameBufferClass::framebufferRender() {
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(GL_TEXTURE_2D, this->FBODataTexture);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, this->FBO);
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
@@ -750,6 +751,41 @@ void FrameBufferClass::framebufferRender() {
 #pragma endregion
 
 FrameBufferClass m_frameBuffer_test;
+
+void printGLError() {
+	GLenum code = glGetError();
+    switch(code)
+    {
+    case GL_NO_ERROR:
+        std::cout << "GL_NO_ERROR" << std::endl;
+        break;
+    case GL_INVALID_ENUM:
+        std::cout << "GL_INVALID_ENUM" << std::endl;
+        break;
+    case GL_INVALID_VALUE:
+        std::cout << "GL_INVALID_VALUE" << std::endl;
+        break;
+    case GL_INVALID_OPERATION:
+        std::cout << "GL_INVALID_OPERATION" << std::endl;
+        break;
+    case GL_INVALID_FRAMEBUFFER_OPERATION:
+        std::cout << "GL_INVALID_FRAMEBUFFER_OPERATION" << std::endl;
+        break;
+    case GL_OUT_OF_MEMORY:
+        std::cout << "GL_OUT_OF_MEMORY" << std::endl;
+        break;
+    case GL_STACK_UNDERFLOW:
+        std::cout << "GL_STACK_UNDERFLOW" << std::endl;
+        break;
+    case GL_STACK_OVERFLOW:
+        std::cout << "GL_STACK_OVERFLOW" << std::endl;
+        break;
+    default:
+        std::cout << "GL_ERROR" << std::endl;
+    }
+}
+
+
 #pragma region Window Frame
 class WindowFrameClass {
 public: 
@@ -790,9 +826,7 @@ void WindowFrameClass::linkProgram() {
 	// Assign content of these shader files to those shaders we created before
 	glShaderSource(vs, 1, vs_source, NULL);
 	glShaderSource(fs, 1, fs_source, NULL);
-	// Free the shader file string(won't be used any more)
-	freeShaderSource(vs_source);
-	freeShaderSource(fs_source);
+	
 	// Compile these shaders
 	glCompileShader(vs);
 	glCompileShader(fs);
@@ -807,6 +841,10 @@ void WindowFrameClass::linkProgram() {
    	glDeleteShader(vs);
    	glDeleteShader(fs);
 
+	// Free the shader file string(won't be used any more)
+	freeShaderSource(vs_source);
+	freeShaderSource(fs_source);
+
 	this->texLoc = glGetUniformLocation(this->programID, "tex");
 }
 
@@ -818,23 +856,24 @@ void WindowFrameClass::setBuffer() {
 	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(this->window_positions), this->window_positions, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, 0);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, (const GLvoid*)(sizeof(GL_FLOAT) * 2));
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 4, 0);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 4, (const GLvoid*)(sizeof(GLfloat) * 2));
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
-
+	
 	glBindVertexArray(0);
-	glBindBuffer(GL_VERTEX_ARRAY, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void WindowFrameClass::initial() {
 	this->linkProgram();
+	cout << this->programID << endl;
 	this->setBuffer();
 }
 
 void WindowFrameClass::render() {
+	glClearColor( 1.0f, 0.0f, 0.0f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	glClearColor( 0.5f, 1.0f, 1.0f, 1.0f );
 
 	glUniform1i(this->texLoc, 3);
 	glActiveTexture(GL_TEXTURE3);
@@ -844,13 +883,6 @@ void WindowFrameClass::render() {
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
 	glUseProgram(0);
-	// glUseProgram(this->programID);
-	// glBindVertexArray(this->vao);
-	// glActiveTexture(GL_TEXTURE3);
-	// glUniform1i(this->texLoc, 3);
-	// glBindTexture(GL_TEXTURE_2D, m_frameBuffer_test.FBODataTexture);
-
-	// glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 
 #pragma endregion
@@ -1005,24 +1037,17 @@ void updateState() {
 void paintGL() {
 	// render terrain
 	// m_renderer->renderPass();
-
-	// [TODO] implement your rendering function here
-	glViewport(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
-	m_frameBuffer_test.framebufferRender();
-	m_window.render();
-	
-
-	// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	// glClearBufferfv(GL_COLOR, 0, glm::value_ptr(vec3(0.0f, 1.0f, 0.0f)));
-
-	// m_frameBuffer_test.setBuffer();
-	// m_frameBuffer_test.framebufferRender();
-
-	// m_window.render();
-
-	//m_airplane.render();
+	// m_airplane.render();
 	//m_houseA.render();
 	//m_houseB.render();
+
+	// [TODO] implement your rendering function here
+	// glViewport(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+	m_frameBuffer_test.framebufferRender();
+	// glClearColor( 1.0f, 0.0f, 0.0f, 1.0f );
+	// glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	m_window.render();
+
 }
 
 ////////////////////////////////////////////////
