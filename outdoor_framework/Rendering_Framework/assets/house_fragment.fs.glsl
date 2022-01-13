@@ -26,7 +26,7 @@ void main()
 		vec3 ka = texColor;
 		vec3 kd = texColor;
 		vec3 ks = vec3(1.0);
-		int n = 100;
+		int n = 255;
 
 		vec3 Ia = vec3(0.1);
 		vec3 Id = vec3(0.8);
