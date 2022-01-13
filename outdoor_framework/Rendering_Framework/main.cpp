@@ -686,11 +686,175 @@ void HouseClass::render() {
 
 #pragma endregion
 
-#pragma endregion
-
 AirplaneClass m_airplane;
 HouseClass m_houseA;
 HouseClass m_houseB;
+#pragma region FrameBuffer
+class FrameBufferClass {
+public: 
+	// Constructor / Destructor
+	 FrameBufferClass() {};
+    ~FrameBufferClass() {};
+
+private:
+    GLuint fbo;
+
+public:
+	GLuint texture;
+	GLuint depthRBO;
+
+public:
+	void framebufferRender();
+	void setBuffer();
+
+};
+
+void FrameBufferClass::setBuffer() {
+	// FBO
+	glDeleteFramebuffers(1, &this->fbo);
+	glGenFramebuffers(1, &this->fbo);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, this->fbo);
+
+	glDeleteTextures(1, &this->texture);
+	glGenTextures(1, &this->texture);
+	glBindTexture(GL_TEXTURE_2D, this->texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->texture, 0);
+
+	// DepthRBO
+	glDeleteRenderbuffers(1, &this->depthRBO);
+	glGenRenderbuffers(1, &this->depthRBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, this->depthRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, this->depthRBO);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+}
+
+void FrameBufferClass::framebufferRender() {
+	glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glClearBufferfv(GL_COLOR, 0, glm::value_ptr(vec3(0.0f, 1.0f, 1.0f)));
+	// Enable Depth Test
+	//glEnable(GL_DEPTH_TEST);
+	//glDisable(GL_STENCIL_TEST);
+	//glDrawBuffer(GL_COLOR_ATTACHMENT0);
+
+	//m_renderer->renderPass();
+	m_airplane.render();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+#pragma endregion
+
+FrameBufferClass m_frameBuffer_test;
+#pragma region Window Frame
+class WindowFrameClass {
+public: 
+	// Constructor / Destructor
+	 WindowFrameClass() {};
+    ~WindowFrameClass() {};
+
+private:
+    GLuint programID;
+	GLuint texLoc;
+	GLuint vao;
+	GLuint vbo;
+
+	float window_positions[16] = {
+		 1.0f, -1.0f,  1.0f,  0.0f,
+		-1.0f, -1.0f,  0.0f,  0.0f,
+		-1.0f,  1.0f,  0.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,  1.0f
+	};
+
+	void linkProgram();
+	void setBuffer();
+
+public:
+	void initial();
+	void render();
+};
+
+void WindowFrameClass::linkProgram() {
+	// Create Shader Program
+	this->programID = glCreateProgram();
+	// Create customize shader by tell openGL specify shader type 
+	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+	// Load shader file
+	char** vs_source = loadShaderSource(".\\assets\\windowFrame_vertex.vs.glsl");
+	char** fs_source = loadShaderSource(".\\assets\\windowFrame_fragment.fs.glsl");
+	// Assign content of these shader files to those shaders we created before
+	glShaderSource(vs, 1, vs_source, NULL);
+	glShaderSource(fs, 1, fs_source, NULL);
+	// Free the shader file string(won't be used any more)
+	freeShaderSource(vs_source);
+	freeShaderSource(fs_source);
+	// Compile these shaders
+	glCompileShader(vs);
+	glCompileShader(fs);
+	// Logging
+	shaderLog(vs);
+	shaderLog(fs);
+	// Assign the program we created before with these shaders
+	glAttachShader(this->programID, vs);
+	glAttachShader(this->programID, fs);
+	glLinkProgram(this->programID);
+	// It is not required to hande the shader in memory
+   	glDeleteShader(vs);
+   	glDeleteShader(fs);
+
+	this->texLoc = glGetUniformLocation(this->programID, "text");
+}
+
+void WindowFrameClass::setBuffer() {
+	glGenVertexArrays(1, &this->vao);
+	glBindVertexArray(this->vao);
+
+	glGenBuffers(1, &this->vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(this->window_positions), this->window_positions, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, 0);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, (const GLvoid*)(sizeof(GL_FLOAT) * 2));
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+
+	glBindVertexArray(0);
+	glBindBuffer(GL_VERTEX_ARRAY, 0);
+}
+
+void WindowFrameClass::initial() {
+	this->linkProgram();
+	this->setBuffer();
+}
+
+void WindowFrameClass::render() {
+	glUseProgram(this->programID);
+	glBindVertexArray(this->vao);
+	glActiveTexture(GL_TEXTURE3);
+	glUniform1i(this->texLoc, 3);
+	glBindTexture(GL_TEXTURE_2D, m_frameBuffer_test.texture);
+
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+}
+
+#pragma endregion
+
+#pragma endregion
+
+
+WindowFrameClass m_window;
+
 
 int main() {
 	glfwInit();
@@ -789,6 +953,7 @@ void initializeGL() {
 	m_renderer->initialize(FRAME_WIDTH, FRAME_HEIGHT);
 
 	m_eye = glm::vec3(512.0, 10.0, 512.0);
+	// m_eye = glm::vec3(512.0, 10.0, 512.0);
 	m_lookAtCenter = glm::vec3(512.0, 0.0, 500.0);
 	m_lookDirection = m_lookAtCenter - m_eye;
 
@@ -796,7 +961,8 @@ void initializeGL() {
 	m_airplane.initial(m_airplaneRotMat, m_airplanePosition);
 	m_houseA.initial(60.0f, vec3(631.0f, 130.0f, 468.0f));
 	m_houseB.initial(15.0f, vec3(656.0f, 135.0f, 483.0f));
-
+	m_window.initial();
+	m_frameBuffer_test.setBuffer();
 	m_cameraProjection = perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
 }
@@ -834,16 +1000,19 @@ void updateState() {
 }
 void paintGL() {
 	// render terrain
-	m_renderer->renderPass();
-	glUseProgram(0);
-	glBindVertexArray(0);
+	//m_renderer->renderPass();
 
 	// [TODO] implement your rendering function here
-	// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	// glClearColor(0.0f, 1.0f, 1.0f, 1.0f);
-	m_airplane.render();
-	m_houseA.render();
-	m_houseB.render();
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glClearBufferfv(GL_COLOR, 0, glm::value_ptr(vec3(1.0f, 0.0f, 0.0f)));
+
+	m_frameBuffer_test.framebufferRender();
+
+	m_window.render();
+	//m_airplane.render();
+	//m_houseA.render();
+	//m_houseB.render();
 }
 
 ////////////////////////////////////////////////

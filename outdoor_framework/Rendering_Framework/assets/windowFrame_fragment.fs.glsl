@@ -1,4 +1,4 @@
-#version 410
+#version 430 core
 
 out vec4 fragColor;
 
@@ -11,5 +11,5 @@ uniform sampler2D tex;
 
 void main() {
 	vec3 texColor = texture(tex, fs_in.texcoord).rgb;
-	fragColor = vec4(texColor, 1.0);
+	fragColor = vec4(vec3(0.0, 1.0, 0.0), 1.0);
 }

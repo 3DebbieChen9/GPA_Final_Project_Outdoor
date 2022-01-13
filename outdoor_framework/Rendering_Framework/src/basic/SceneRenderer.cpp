@@ -13,12 +13,14 @@ void SceneRenderer::renderPass(){
 	this->clear(glm::vec4(1.0, 1.0, 1.0, 1.0), 1.0);
 	glViewport(0, 0, this->m_frameWidth, this->m_frameHeight);
 
+	this->m_shader->useShader();
 	SceneManager *manager = SceneManager::Instance();
 
 	glUniformMatrix4fv(manager->m_projMatHandle, 1, false, glm::value_ptr(this->m_projMat));
 	glUniformMatrix4fv(manager->m_viewMatHandle, 1, false, glm::value_ptr(this->m_viewMat));
 	//////////////////////////////////////////////////////////////////////////////////	
 	this->m_terrain->update();	
+	this->m_shader->disableShader();
 }
 
 // =======================================
