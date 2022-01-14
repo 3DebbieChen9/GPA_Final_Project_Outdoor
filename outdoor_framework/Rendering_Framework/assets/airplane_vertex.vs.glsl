@@ -1,6 +1,6 @@
 #version 430 core
 
-layout(location = 0) in vec3 iv3vertex;
+layout(location = 0) in vec3 iv3position;
 layout(location = 1) in vec2 iv2tex_coord;
 layout(location = 2) in vec3 iv3normal;
 
@@ -8,29 +8,39 @@ uniform mat4 um4m;
 uniform mat4 um4v;
 uniform mat4 um4p;
 uniform mat4 um4Lightmvp;
+uniform vec3 uv3LightPos;
 
-out VertexData
+out VS_OUT
 {
-    vec3 N; // eye space normal
-    vec3 L; // eye space light vector
-    vec3 H; // eye space halfway vector
+	vec3 N; // eye space normal
+	vec3 L; // eye space light vector
+	vec3 V; // eye space view vector
+	vec2 texcoord;
+	vec3 eyeDir;
+	vec3 lightDir;
 	vec3 normal;
-    vec2 texcoord;
-	vec4 lightCoord;
-} vertexData;
+} vs_out;
 
 void main()
 {
-	gl_Position = um4p * um4v * um4m * vec4(iv3vertex, 1.0);
-	vertexData.texcoord = iv2tex_coord;
-	vertexData.normal = iv3normal;
-	vertexData.lightCoord = um4Lightmvp * vec4(iv3vertex, 1.0);
+	// Calculate view-space coordinate
+	vec4 P = um4v * um4m * vec4(iv3position, 1.0);
+	// Eye space to tangent space TBN
+	vec3 T = normalize(mat3(um4v * um4m) * iv3tangent);
+	vec3 N = normalize(mat3(um4v * um4m) * iv3normal);
+	vec3 B = cross(N, T);
+	vec3 L = uv3LightPos - P.xyz;
+	vec3 V = -P.xyz;
 
-	vec4 P = um4v * um4m * vec4(iv3vertex, 1.0);
-	vec3 V = normalize(-P.xyz);
-	vec3 light_pos = vec3(0.2, 0.6, 0.5);
+	vs_out.N = mat3(um4v * um4m) * iv3normal;
+	vs_out.L = uv3LightPos - P.xyz;
+	vs_out.V = -P.xyz;
 
-	vertexData.N = normalize(mat3(um4v * um4m) * iv3normal);
-	vertexData.L = normalize(light_pos - P.xyz);
-	vertexData.H = normalize(vertexData.L + V);	
+	vs_out.texcoord = iv2tex_coord;
+	vs_out.eyeDir = normalize(vec3(dot(V, T), dot(V, B), dot(V, N)));
+	vs_out.lightDir = normalize(vec3(dot(L, T), dot(L, B), dot(L, N)));
+	vs_out.normal = iv3normal;
+
+	// Calculate the clip-space position of each vertex
+	gl_Position = um4p * P;
 }

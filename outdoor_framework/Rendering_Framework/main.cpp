@@ -76,6 +76,8 @@ struct Shape
 	GLuint vbo_position;
 	GLuint vbo_normal;
 	GLuint vbo_texcoord;
+	GLuint vbo_tangents;
+	GLuint vbo_bittangents;
 	GLuint ibo;
 	int drawCount;
 	int materialID;
@@ -97,6 +99,38 @@ typedef struct TextureData
 	unsigned char* data;
 } TextureData;
 #pragma endregion
+void printGLError() {
+	GLenum code = glGetError();
+	switch (code)
+	{
+	case GL_NO_ERROR:
+		std::cout << "GL_NO_ERROR" << std::endl;
+		break;
+	case GL_INVALID_ENUM:
+		std::cout << "GL_INVALID_ENUM" << std::endl;
+		break;
+	case GL_INVALID_VALUE:
+		std::cout << "GL_INVALID_VALUE" << std::endl;
+		break;
+	case GL_INVALID_OPERATION:
+		std::cout << "GL_INVALID_OPERATION" << std::endl;
+		break;
+	case GL_INVALID_FRAMEBUFFER_OPERATION:
+		std::cout << "GL_INVALID_FRAMEBUFFER_OPERATION" << std::endl;
+		break;
+	case GL_OUT_OF_MEMORY:
+		std::cout << "GL_OUT_OF_MEMORY" << std::endl;
+		break;
+	case GL_STACK_UNDERFLOW:
+		std::cout << "GL_STACK_UNDERFLOW" << std::endl;
+		break;
+	case GL_STACK_OVERFLOW:
+		std::cout << "GL_STACK_OVERFLOW" << std::endl;
+		break;
+	default:
+		std::cout << "GL_ERROR" << std::endl;
+	}
+}
 
 #pragma region Default Loader
 // load a png image and return a TextureData structure with raw data
@@ -111,6 +145,7 @@ TextureData loadImg(const char* path)
 	{
 		texture.data = new unsigned char[texture.width * texture.height * 4 * sizeof(unsigned char)];
 		memcpy(texture.data, data, texture.width * texture.height * 4 * sizeof(unsigned char));
+		cout << "Load Texture: " << path << " | width:" << texture.width << " | height: " << texture.height << endl;
 		stbi_image_free(data);
 	}
 	return texture;
@@ -169,6 +204,7 @@ public:
 		GLint um4v;
 		GLint um4p;
 		GLint um4Lightmvp;
+		GLint uv3LightPos;
 		// fs
 		GLint texLoc;
 		GLint uv3Ambient;
@@ -286,19 +322,19 @@ void AirplaneClass::loadModel() {
 
         // position
         glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
-        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &position[0], GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &position[0], GL_STATIC_DRAW);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(0);
     
         // texcoord
         glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
-        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 2 * sizeof(GL_FLOAT), &texcoord[0], GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 2 * sizeof(float), &texcoord[0], GL_STATIC_DRAW);
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(1);
     
         // normal
         glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
-        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &normal[0], GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &normal[0], GL_STATIC_DRAW);
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(2);
     
@@ -340,6 +376,7 @@ void AirplaneClass::getUniformLocation() {
 	this->uniformID.um4v = glGetUniformLocation(this->programID, "um4v");
 	this->uniformID.um4p = glGetUniformLocation(this->programID, "um4p");
 	this->uniformID.um4Lightmvp = glGetUniformLocation(this->programID, "um4Lightmvp");
+	this->uniformID.uv3LightPos = glGetUniformLocation(this->programID, "uv3LightPos");
 	// fs
 	this->uniformID.texLoc = glGetUniformLocation(this->programID, "tex");
 	this->uniformID.ubPhongFlag = glGetUniformLocation(this->programID, "ubPhongFlag");
@@ -398,6 +435,7 @@ void AirplaneClass::render() {
 	glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(m_cameraView));
 	glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(m_cameraProjection));
 	glUniformMatrix4fv(this->uniformID.um4Lightmvp, 1, GL_FALSE, value_ptr(scale_bias_matrix * lightProjection * lightView * this->matrix.model * this->matrix.scale * this->matrix.rotate));
+	glUniform3fv(this->uniformID.uv3LightPos, 1, value_ptr(vec3(0.2f, 0.6f, 0.5f)));
 	// fs
 	glUniform1i(this->uniformID.ubPhongFlag, (this->blinnPhongFlag) ? 1 : 0);
 	
@@ -436,12 +474,15 @@ public:
 		GLint um4v;
 		GLint um4p;
 		GLint um4Lightmvp;
+		GLint uv3LightPos;
 		// fs
 		GLint texLoc;
+		GLint texLoc_normal;
 		GLint uv3Ambient;
 		GLint uv3Specular;
 		GLint uv3Diffuse;
 		GLint ubPhongFlag;
+		GLint ubNormalFlag;
 	};
 	typedef struct struct_matrix {
 		mat4 model = mat4(1.0f);
@@ -455,9 +496,11 @@ private:
     struct_matrix matrix;
     vector<Shape> shapes;
     vector<Material> materials;
+	GLuint normalTexture;
 
 public:
     bool blinnPhongFlag;
+	bool normalMappingFlag;
 
 private:
     void loadModel();
@@ -530,6 +573,8 @@ void HouseClass::loadModel() {
         vector<float> position;
         vector<float> normal;
         vector<float> texcoord;
+		vector<float> tangent;
+		vector<float> bittangent;
         for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
         {
             // mesh->mVertices[v][0~2] => position
@@ -543,30 +588,47 @@ void HouseClass::loadModel() {
             normal.push_back(mesh->mNormals[v][0]);
             normal.push_back(mesh->mNormals[v][1]);
             normal.push_back(mesh->mNormals[v][2]);
+			if (mesh->HasTangentsAndBitangents()) {
+				// mesh->mTangents[v][0~2] => tangent
+				tangent.push_back(mesh->mTangents[v][0]);
+				tangent.push_back(mesh->mTangents[v][1]);
+				tangent.push_back(mesh->mTangents[v][2]);
+				// mesh->mBitangents[v][0~2] => bittangent
+				bittangent.push_back(mesh->mBitangents[v][0]);
+				bittangent.push_back(mesh->mBitangents[v][1]);
+				bittangent.push_back(mesh->mBitangents[v][2]);
+			}
         }
-    
-        // create 3 vbos to hold data
+
+        // create vbos to hold data
         glGenBuffers(1, &shape.vbo_position);
         glGenBuffers(1, &shape.vbo_texcoord);
         glGenBuffers(1, &shape.vbo_normal);
+		glGenBuffers(1, &shape.vbo_tangents);
 
         // position
         glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
-        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &position[0], GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &position[0], GL_STATIC_DRAW);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(0);
     
         // texcoord
         glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
-        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 2 * sizeof(GL_FLOAT), &texcoord[0], GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 2 * sizeof(float), &texcoord[0], GL_STATIC_DRAW);
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(1);
     
         // normal
         glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
-        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(GL_FLOAT), &normal[0], GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &normal[0], GL_STATIC_DRAW);
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(2);
+
+		// tangent
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_tangents);
+		glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &tangent[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(3);
     
         vector<unsigned int> face;
         for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
@@ -597,6 +659,18 @@ void HouseClass::loadModel() {
     }
     
     aiReleaseImport(scene);
+
+	TextureData normalImg = loadImg(".\\models\\textures\\Medieval_house_Normal.png");
+	glGenTextures(1, &this->normalTexture);
+	glBindTexture(GL_TEXTURE_2D, this->normalTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, normalImg.width, normalImg.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, normalImg.data);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	//glGenerateMipmap(GL_TEXTURE_2D);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
     cout << "Load medievalHouse.obj done" << endl;
 }
 
@@ -606,9 +680,12 @@ void HouseClass::getUniformLocation() {
 	this->uniformID.um4v = glGetUniformLocation(this->programID, "um4v");
 	this->uniformID.um4p = glGetUniformLocation(this->programID, "um4p");
 	this->uniformID.um4Lightmvp = glGetUniformLocation(this->programID, "um4Lightmvp");
+	this->uniformID.uv3LightPos = glGetUniformLocation(this->programID, "uv3LightPos");
 	// fs
 	this->uniformID.texLoc = glGetUniformLocation(this->programID, "tex");
+	this->uniformID.texLoc_normal = glGetUniformLocation(this->programID, "texNormal");
 	this->uniformID.ubPhongFlag = glGetUniformLocation(this->programID, "ubPhongFlag");
+	this->uniformID.ubNormalFlag = glGetUniformLocation(this->programID, "ubNormalFlag");
 	this->uniformID.uv3Ambient = glGetUniformLocation(this->programID, "uv3Ambient");
 	this->uniformID.uv3Specular = glGetUniformLocation(this->programID, "uv3Specular");
 	this->uniformID.uv3Diffuse = glGetUniformLocation(this->programID, "uv3Diffuse");
@@ -647,7 +724,10 @@ void HouseClass::linkProgram() {
 void HouseClass::initial(float _rotateAngle, vec3 _position) {
 	this->matrix.rotate = rotate(mat4(1.0f), radians(_rotateAngle), vec3(0.0f, 1.0f, 0.0f));
 	this->matrix.model = translate(mat4(1.0f), _position);
+	
 	this->blinnPhongFlag = false;
+	this->normalMappingFlag = false;
+	
 	this->linkProgram();
 	this->getUniformLocation();
     this->loadModel();
@@ -660,34 +740,39 @@ void HouseClass::render() {
 	glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(m_cameraView));
 	glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(m_cameraProjection));
 	glUniformMatrix4fv(this->uniformID.um4Lightmvp, 1, GL_FALSE, value_ptr(scale_bias_matrix * lightProjection * lightView * this->matrix.model * this->matrix.scale * this->matrix.rotate));
+	glUniform3fv(this->uniformID.uv3LightPos, 1, value_ptr(vec3(0.2f, 0.6f, 0.5f)));
 	// fs
 	glUniform1i(this->uniformID.ubPhongFlag, (this->blinnPhongFlag) ? 1 : 0);
-	
-	glUniform1i(this->uniformID.texLoc, 3);
-	glActiveTexture(GL_TEXTURE3);
+	glUniform1i(this->uniformID.ubNormalFlag, (this->normalMappingFlag) ? 1 : 0);
+
 	for (int i = 0; i < this->shapes.size(); i++) {
 		int materialID = this->shapes[i].materialID;
-		
 		glUniform3fv(this->uniformID.uv3Ambient, 1, value_ptr(this->materials[materialID].ka));
 		glUniform3fv(this->uniformID.uv3Specular, 1, value_ptr(this->materials[materialID].ks));
 		glUniform3fv(this->uniformID.uv3Diffuse, 1, value_ptr(this->materials[materialID].kd));
 		
 		glBindVertexArray(this->shapes[i].vao);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->shapes[i].ibo);
+		
+		glUniform1i(this->uniformID.texLoc, 3);
+		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, this->materials[materialID].diffuse_tex);
+		
+		glUniform1i(this->uniformID.texLoc_normal, 4);
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, this->normalTexture);
+		
 		glDrawElements(GL_TRIANGLES, this->shapes[i].drawCount, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
+	
+
 	glUseProgram(0);
 	glBindVertexArray(0);
 }
 
 #pragma endregion
-
-AirplaneClass m_airplane;
-HouseClass m_houseA;
-HouseClass m_houseB;
 
 #pragma region FrameBuffer
 class FrameBufferClass {
@@ -701,8 +786,9 @@ public:
 	GLuint FBODataTexture;
 
 	void framebufferRender();
+	void framebufferRenderEnd();
 	void setBuffer();
-
+	void initial();
 };
 
 void FrameBufferClass::setBuffer() { // Need to be called in Reshape
@@ -725,7 +811,7 @@ void FrameBufferClass::setBuffer() { // Need to be called in Reshape
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 
 	// Frame Buffer
-	glGenFramebuffers(1, &this->FBO);
+	//glGenFramebuffers(1, &this->FBO);
 	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, this->FBO );
 	glFramebufferRenderbuffer( GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, this->depthRBO );
 	glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->FBODataTexture, 0 );
@@ -742,49 +828,17 @@ void FrameBufferClass::framebufferRender() {
 
 	glClearBufferfv(GL_COLOR, 0, green);
 	glClearBufferfv(GL_DEPTH, 0, &one);
+}
 
-	// m_renderer->renderPass();
-	m_airplane.render();
+void FrameBufferClass::framebufferRenderEnd() {
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+}
 
-	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 );
+void FrameBufferClass::initial() {
+	glGenFramebuffers(1, &this->FBO);
+	this->setBuffer();
 }
 #pragma endregion
-
-FrameBufferClass m_frameBuffer_test;
-
-void printGLError() {
-	GLenum code = glGetError();
-    switch(code)
-    {
-    case GL_NO_ERROR:
-        std::cout << "GL_NO_ERROR" << std::endl;
-        break;
-    case GL_INVALID_ENUM:
-        std::cout << "GL_INVALID_ENUM" << std::endl;
-        break;
-    case GL_INVALID_VALUE:
-        std::cout << "GL_INVALID_VALUE" << std::endl;
-        break;
-    case GL_INVALID_OPERATION:
-        std::cout << "GL_INVALID_OPERATION" << std::endl;
-        break;
-    case GL_INVALID_FRAMEBUFFER_OPERATION:
-        std::cout << "GL_INVALID_FRAMEBUFFER_OPERATION" << std::endl;
-        break;
-    case GL_OUT_OF_MEMORY:
-        std::cout << "GL_OUT_OF_MEMORY" << std::endl;
-        break;
-    case GL_STACK_UNDERFLOW:
-        std::cout << "GL_STACK_UNDERFLOW" << std::endl;
-        break;
-    case GL_STACK_OVERFLOW:
-        std::cout << "GL_STACK_OVERFLOW" << std::endl;
-        break;
-    default:
-        std::cout << "GL_ERROR" << std::endl;
-    }
-}
-
 
 #pragma region Window Frame
 class WindowFrameClass {
@@ -811,7 +865,7 @@ private:
 
 public:
 	void initial();
-	void render();
+	void render(GLuint texture);
 };
 
 void WindowFrameClass::linkProgram() {
@@ -871,13 +925,13 @@ void WindowFrameClass::initial() {
 	this->setBuffer();
 }
 
-void WindowFrameClass::render() {
+void WindowFrameClass::render(GLuint texture) {
 	glClearColor( 1.0f, 0.0f, 0.0f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	glUniform1i(this->texLoc, 3);
 	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, m_frameBuffer_test.FBODataTexture);
+	glBindTexture(GL_TEXTURE_2D, texture);
 	glBindVertexArray(this->vao);
 	glUseProgram(this->programID);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -888,6 +942,10 @@ void WindowFrameClass::render() {
 #pragma endregion
 
 
+AirplaneClass m_airplane;
+HouseClass m_houseA;
+HouseClass m_houseB;
+FrameBufferClass m_frameBuffer_test;
 WindowFrameClass m_window;
 
 
@@ -994,10 +1052,10 @@ void initializeGL() {
 
 	initScene();
 	m_airplane.initial(m_airplaneRotMat, m_airplanePosition);
-	// m_houseA.initial(60.0f, vec3(631.0f, 130.0f, 468.0f));
-	// m_houseB.initial(15.0f, vec3(656.0f, 135.0f, 483.0f));
+	m_houseA.initial(60.0f, vec3(631.0f, 130.0f, 468.0f));
+	m_houseB.initial(15.0f, vec3(656.0f, 135.0f, 483.0f));
 	m_window.initial();
-	m_frameBuffer_test.setBuffer();
+	m_frameBuffer_test.initial();
 
 	m_cameraProjection = perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
@@ -1005,6 +1063,7 @@ void initializeGL() {
 void resizeGL(GLFWwindow *window, int w, int h) {
 	FRAME_WIDTH = w;
 	FRAME_HEIGHT = h;
+	m_frameBuffer_test.setBuffer();
 	m_renderer->resize(w, h);
 	m_cameraProjection = perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
@@ -1037,16 +1096,19 @@ void updateState() {
 void paintGL() {
 	// render terrain
 	// m_renderer->renderPass();
-	// m_airplane.render();
-	//m_houseA.render();
-	//m_houseB.render();
 
 	// [TODO] implement your rendering function here
 	// glViewport(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+
 	m_frameBuffer_test.framebufferRender();
-	// glClearColor( 1.0f, 0.0f, 0.0f, 1.0f );
-	// glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	m_window.render();
+
+	//m_renderer->renderPass();
+	m_airplane.render();
+	m_houseA.render();
+	m_houseB.render();
+
+	m_frameBuffer_test.framebufferRenderEnd();
+	m_window.render(m_frameBuffer_test.FBODataTexture);
 
 }
 
@@ -1133,21 +1195,19 @@ void cursorPosCallback(GLFWwindow* window, double x, double y) {
 }
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (GLFW_PRESS == action) {
-		printf("\nKey %d is pressed ", key);
 		switch (key)
 		{
 		case GLFW_KEY_Z:
 			m_airplane.blinnPhongFlag = !m_airplane.blinnPhongFlag;
 			m_houseA.blinnPhongFlag = !m_houseA.blinnPhongFlag;
 			m_houseB.blinnPhongFlag = !m_houseB.blinnPhongFlag;
-			if (m_airplane.blinnPhongFlag) {
-				cout << " True" << endl;
-			}
-			else {
-				cout << " False" << endl;
-			}
+			cout << "Phong Shading: " << m_airplane.blinnPhongFlag << endl;
 			break;
-
+		case GLFW_KEY_X:
+			m_houseA.normalMappingFlag = !m_houseA.normalMappingFlag;
+			m_houseB.normalMappingFlag = !m_houseB.normalMappingFlag;
+			cout << "Normal Mapping: " << m_houseA.normalMappingFlag << endl;
+			break;
 		default:
 			break;
 		}

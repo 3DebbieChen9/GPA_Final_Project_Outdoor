@@ -72,4 +72,24 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\airplane_fragment.fs.glsl">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="assets\airplane_vertex.vs.glsl">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="assets\house_fragment.fs.glsl">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="assets\house_vertex.vs.glsl">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="assets\windowFrame_fragment.fs.glsl">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="assets\windowFrame_vertex.vs.glsl">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>
