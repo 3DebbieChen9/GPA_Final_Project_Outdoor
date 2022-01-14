@@ -44,6 +44,10 @@
   <ItemGroup>
     <None Include="assets\airplane_fragment.fs.glsl" />
     <None Include="assets\airplane_vertex.vs.glsl" />
+    <None Include="assets\deferred_fs.fs.glsl" />
+    <None Include="assets\deferred_vs.vs.glsl" />
+    <None Include="assets\geometry_fs.fs.glsl" />
+    <None Include="assets\geometry_vs.vs.glsl" />
     <None Include="assets\house_fragment.fs.glsl" />
     <None Include="assets\house_vertex.vs.glsl" />
     <None Include="assets\windowFrame_fragment.fs.glsl" />

@@ -19,7 +19,7 @@ out VS_OUT
     vec2 texcoord;
 	vec3 eyeDir;
 	vec3 lightDir; 
-	vec3 normal;
+	//vec3 normal;
 } vs_out;
 
 void main()
@@ -40,7 +40,8 @@ void main()
 	vs_out.texcoord = iv2tex_coord;
 	vs_out.eyeDir = normalize(vec3(dot(V, T), dot(V, B), dot(V, N)));
 	vs_out.lightDir = normalize(vec3(dot(L, T), dot(L, B), dot(L, N)));
-	vs_out.normal = iv3normal;
+
+	//vs_out.normal = iv3normal;
 	
 	// Calculate the clip-space position of each vertex
 	gl_Position = um4p * P;

@@ -86,6 +86,8 @@ struct Shape
 struct Material
 {
 	GLuint diffuse_tex;
+	GLuint ambient_tex;
+	GLuint specular_tex;
 	glm::vec4 ka;
 	glm::vec4 kd;
 	glm::vec4 ks;
@@ -190,6 +192,18 @@ void shaderLog(GLuint shader)
 }
 #pragma endregion
 
+#pragma region Object
+class ObjectClass {
+public:
+	// Constructor / Destructor
+	ObjectClass() {};
+	~ObjectClass() {};
+
+
+};
+#pragma endregion
+
+
 #pragma region Airplane Class
 class AirplaneClass {
 public:
@@ -206,6 +220,9 @@ public:
 		GLint um4Lightmvp;
 		GLint uv3LightPos;
 		// fs
+		//GLint texLoc_diffuse;
+		//GLint texLoc_ambient;
+		//GLint texLoc_specular;
 		GLint texLoc;
 		GLint uv3Ambient;
 		GLint uv3Specular;
@@ -220,7 +237,6 @@ public:
 
 private:
     GLuint programID;
-    // struct_uniformID uniformID;
     struct_matrix matrix;
     vector<Shape> shapes;
     vector<Material> materials;
@@ -228,6 +244,14 @@ private:
 public:
     bool blinnPhongFlag;
 	struct_uniformID uniformID;
+	//struct
+	//{
+	//	GLint diffuse;
+	//	GLint ambient;
+	//	GLint specular;
+	//	GLint worldVertex;
+	//	GLint worldNormal;
+	//} texture;
 
 private:
     void loadModel();
@@ -300,6 +324,8 @@ void AirplaneClass::loadModel() {
         vector<float> position;
         vector<float> normal;
         vector<float> texcoord;
+		vector<float> tangent;
+		vector<float> bittangent;
         for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
         {
             // mesh->mVertices[v][0~2] => position
@@ -313,12 +339,24 @@ void AirplaneClass::loadModel() {
             normal.push_back(mesh->mNormals[v][0]);
             normal.push_back(mesh->mNormals[v][1]);
             normal.push_back(mesh->mNormals[v][2]);
+
+			if (mesh->HasTangentsAndBitangents()) {
+				// mesh->mTangents[v][0~2] => tangent
+				tangent.push_back(mesh->mTangents[v][0]);
+				tangent.push_back(mesh->mTangents[v][1]);
+				tangent.push_back(mesh->mTangents[v][2]);
+				// mesh->mBitangents[v][0~2] => bittangent
+				bittangent.push_back(mesh->mBitangents[v][0]);
+				bittangent.push_back(mesh->mBitangents[v][1]);
+				bittangent.push_back(mesh->mBitangents[v][2]);
+			}
         }
     
         // create 3 vbos to hold data
         glGenBuffers(1, &shape.vbo_position);
         glGenBuffers(1, &shape.vbo_texcoord);
         glGenBuffers(1, &shape.vbo_normal);
+		glGenBuffers(1, &shape.vbo_tangents);
 
         // position
         glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
@@ -337,6 +375,12 @@ void AirplaneClass::loadModel() {
         glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &normal[0], GL_STATIC_DRAW);
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(2);
+
+		// tangent
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_tangents);
+		glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &tangent[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(3);
     
         vector<unsigned int> face;
         for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
@@ -362,6 +406,8 @@ void AirplaneClass::loadModel() {
         texcoord.shrink_to_fit();
         normal.clear();
         normal.shrink_to_fit();
+		tangent.clear();
+		tangent.shrink_to_fit();
         face.clear();
         face.shrink_to_fit();
     }
@@ -378,6 +424,9 @@ void AirplaneClass::getUniformLocation() {
 	this->uniformID.um4Lightmvp = glGetUniformLocation(this->programID, "um4Lightmvp");
 	this->uniformID.uv3LightPos = glGetUniformLocation(this->programID, "uv3LightPos");
 	// fs
+	//this->uniformID.texLoc_diffuse = glGetUniformLocation(this->programID, "tex_diffuse");
+	//this->uniformID.texLoc_ambient = glGetUniformLocation(this->programID, "tex_ambient");
+	//this->uniformID.texLoc_specular = glGetUniformLocation(this->programID, "tex_specular");
 	this->uniformID.texLoc = glGetUniformLocation(this->programID, "tex");
 	this->uniformID.ubPhongFlag = glGetUniformLocation(this->programID, "ubPhongFlag");
 	this->uniformID.uv3Ambient = glGetUniformLocation(this->programID, "uv3Ambient");
@@ -392,6 +441,8 @@ void AirplaneClass::linkProgram() {
 	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
 	// Load shader file
+	//char** vs_source = loadShaderSource(".\\assets\\geometry_vs.vs.glsl");
+	//char** fs_source = loadShaderSource(".\\assets\\geometry_fs.fs.glsl");
 	char** vs_source = loadShaderSource(".\\assets\\airplane_vertex.vs.glsl");
 	char** fs_source = loadShaderSource(".\\assets\\airplane_fragment.fs.glsl");
 	// Assign content of these shader files to those shaders we created before
@@ -418,9 +469,10 @@ void AirplaneClass::linkProgram() {
 void AirplaneClass::initial(mat4 _rotateMatrix, vec3 _position) {
 	this->matrix.rotate = _rotateMatrix;
     this->matrix.model = translate(mat4(1.0f), _position);
+
     this->blinnPhongFlag = false;
+	
 	this->linkProgram();
-	cout << this->programID << endl;
 	this->getUniformLocation();
     this->loadModel();
 }
@@ -439,18 +491,21 @@ void AirplaneClass::render() {
 	// fs
 	glUniform1i(this->uniformID.ubPhongFlag, (this->blinnPhongFlag) ? 1 : 0);
 	
-	glUniform1i(this->uniformID.texLoc, 3);
-	glActiveTexture(GL_TEXTURE3);
 	for (int i = 0; i < this->shapes.size(); i++) {
 		int materialID = this->shapes[i].materialID;
-		
 		glUniform3fv(this->uniformID.uv3Ambient, 1, value_ptr(this->materials[materialID].ka));
 		glUniform3fv(this->uniformID.uv3Specular, 1, value_ptr(this->materials[materialID].ks));
 		glUniform3fv(this->uniformID.uv3Diffuse, 1, value_ptr(this->materials[materialID].kd));
 		
 		glBindVertexArray(this->shapes[i].vao);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->shapes[i].ibo);
+
+		glUniform1i(this->uniformID.texLoc, 3);
+		glActiveTexture(GL_TEXTURE3);
+		//glUniform1i(this->uniformID.texLoc_diffuse, 3);
+		//glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, this->materials[materialID].diffuse_tex);
+		
 		glDrawElements(GL_TRIANGLES, this->shapes[i].drawCount, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
@@ -588,6 +643,7 @@ void HouseClass::loadModel() {
             normal.push_back(mesh->mNormals[v][0]);
             normal.push_back(mesh->mNormals[v][1]);
             normal.push_back(mesh->mNormals[v][2]);
+			
 			if (mesh->HasTangentsAndBitangents()) {
 				// mesh->mTangents[v][0~2] => tangent
 				tangent.push_back(mesh->mTangents[v][0]);
@@ -654,6 +710,8 @@ void HouseClass::loadModel() {
         texcoord.shrink_to_fit();
         normal.clear();
         normal.shrink_to_fit();
+		tangent.clear();
+		tangent.shrink_to_fit();
         face.clear();
         face.shrink_to_fit();
     }
@@ -773,6 +831,93 @@ void HouseClass::render() {
 }
 
 #pragma endregion
+
+#pragma region G-buffer
+class GBufferClass {
+public :
+	// Constructor / Destructor
+	GBufferClass() {};
+	~GBufferClass() {};
+
+	GLuint gbuffer;
+	GLuint tex_vertex;
+	GLuint tex_normal;
+	GLuint tex_ambient;
+	GLuint tex_diffuse;
+	GLuint tex_specular;
+
+	void setupGBuffer();
+	void GBufferRender();
+	void GBufferRenderEnd();
+	
+};
+
+void GBufferClass::setupGBuffer() {
+	glGenFramebuffers(1, &this->gbuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, this->gbuffer);
+
+	// Diffuse
+	glGenTextures(1, &this->tex_diffuse);
+	glBindTexture(GL_TEXTURE_2D, this->tex_diffuse);
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, FRAME_WIDTH, FRAME_HEIGHT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	// Ambient
+	glGenTextures(1, &this->tex_ambient);
+	glBindTexture(GL_TEXTURE_2D, this->tex_ambient);
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, FRAME_WIDTH, FRAME_HEIGHT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	// Specular
+	glGenTextures(1, &this->tex_specular);
+	glBindTexture(GL_TEXTURE_2D, this->tex_specular);
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, FRAME_WIDTH, FRAME_HEIGHT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	// Vertex
+	glGenTextures(1, &this->tex_vertex);
+	glBindTexture(GL_TEXTURE_2D, this->tex_vertex);
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, FRAME_WIDTH, FRAME_HEIGHT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	// Normal
+	glGenTextures(1, &this->tex_normal);
+	glBindTexture(GL_TEXTURE_2D, this->tex_normal);
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, FRAME_WIDTH, FRAME_HEIGHT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, this->tex_diffuse, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, this->tex_ambient, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, this->tex_specular, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, this->tex_vertex, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, this->tex_normal, 0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void GBufferClass::GBufferRender() {
+	glBindFramebuffer(GL_FRAMEBUFFER, this->gbuffer);
+	const GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
+	glDrawBuffers(3, drawBuffers);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+	static const GLfloat blue[] = { 0.0f, 0.0f, 0.25f, 1.0f };
+	static const GLfloat one = 1.0f;
+
+	glClearBufferfv(GL_COLOR, 0, blue);
+	glClearBufferfv(GL_DEPTH, 0, &one);
+}
+
+void GBufferClass::GBufferRenderEnd() {
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+#pragma endregion
+
 
 #pragma region FrameBuffer
 class FrameBufferClass {
@@ -1093,6 +1238,9 @@ void updateState() {
 	// update airplane
 	updateAirplane(m_cameraView);
 }
+
+bool m_terrainOn = false;
+
 void paintGL() {
 	// render terrain
 	// m_renderer->renderPass();
@@ -1102,6 +1250,9 @@ void paintGL() {
 
 	m_frameBuffer_test.framebufferRender();
 
+	//if (m_terrainOn) {
+	//	m_renderer->renderPass();
+	//}
 	//m_renderer->renderPass();
 	m_airplane.render();
 	m_houseA.render();
@@ -1111,6 +1262,7 @@ void paintGL() {
 	m_window.render(m_frameBuffer_test.FBODataTexture);
 
 }
+
 
 ////////////////////////////////////////////////
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
@@ -1207,6 +1359,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 			m_houseA.normalMappingFlag = !m_houseA.normalMappingFlag;
 			m_houseB.normalMappingFlag = !m_houseB.normalMappingFlag;
 			cout << "Normal Mapping: " << m_houseA.normalMappingFlag << endl;
+			break;
+		case GLFW_KEY_C:
+			m_terrainOn = !m_terrainOn;
+			cout << "Draw Terrain: " << m_terrainOn << endl;
 			break;
 		default:
 			break;

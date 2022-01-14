@@ -3,6 +3,7 @@
 layout(location = 0) in vec3 iv3position;
 layout(location = 1) in vec2 iv2tex_coord;
 layout(location = 2) in vec3 iv3normal;
+layout(location = 3) in vec3 iv3tangent;
 
 uniform mat4 um4m;
 uniform mat4 um4v;
@@ -18,7 +19,9 @@ out VS_OUT
 	vec2 texcoord;
 	vec3 eyeDir;
 	vec3 lightDir;
-	vec3 normal;
+	//vec3 ws_coords;
+	//vec3 normal;
+	//vec3 tangent;
 } vs_out;
 
 void main()
@@ -39,7 +42,10 @@ void main()
 	vs_out.texcoord = iv2tex_coord;
 	vs_out.eyeDir = normalize(vec3(dot(V, T), dot(V, B), dot(V, N)));
 	vs_out.lightDir = normalize(vec3(dot(L, T), dot(L, B), dot(L, N)));
-	vs_out.normal = iv3normal;
+	
+	//vs_out.ws_coords = (um4m * iv3position).xyz;
+	//vs_out.normal = mat3(um4m) * iv3normal;
+	//vs_out.tangent = iv3tangent;
 
 	// Calculate the clip-space position of each vertex
 	gl_Position = um4p * P;

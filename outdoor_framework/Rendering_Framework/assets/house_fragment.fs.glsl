@@ -10,7 +10,7 @@ in VS_OUT
 	vec2 texcoord;
 	vec3 eyeDir;
 	vec3 lightDir;
-	vec3 normal;
+	//vec3 normal;
 } fs_in;
 
 uniform bool ubPhongFlag;
@@ -67,7 +67,7 @@ void normalMapping() {
 	vec3 specular_albedo = vec3(1.0);
 	vec3 specular = max(pow(dot(R, V), 20.0), 0.0) * specular_albedo;
 
-	fragColor = vec4(ambient + diffuse + specular, 1.0);
+	fragColor = vec4(diffuse + specular, 1.0);
 	//fragColor = vec4(texture(texNormal, fs_in.texcoord).rgb, 1.0);
 }
 

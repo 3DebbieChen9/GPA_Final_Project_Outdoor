@@ -1,6 +1,10 @@
 #version 430 core
 
-layout(location = 0) out vec4 fragColor;
+layout(location = 0) out vec4 fragColor; // Diffuse map
+//layout(location = 1) out vec4 colorAmbient; // Ambient map
+//layout(location = 2) out vec4 colorSpecular; // Specular map
+//layout(location = 3) out vec4 colorVertex; // World Space Vertex map
+//layout(location = 4) out vec4 colorNormal; // Normal map
 
 in VS_OUT
 {
@@ -10,7 +14,9 @@ in VS_OUT
 	vec2 texcoord;
 	vec3 eyeDir;
 	vec3 lightDir;
-	vec3 normal;
+	//vec3 ws_coords;
+	//vec3 normal;
+	//vec3 tangent;
 } fs_in;
 
 uniform bool ubPhongFlag;
