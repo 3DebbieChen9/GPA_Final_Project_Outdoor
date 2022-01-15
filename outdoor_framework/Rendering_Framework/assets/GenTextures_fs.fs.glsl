@@ -40,11 +40,14 @@ void main()
 		}
 		else {
 			ws_normal = vec4(fs_in.nm / 2 + 1.0, 1.0);
+			// ws_normal = vec4(clamp(fs_in.nm / 2 + 1.0, vec3(0.0), vec3(1.0)), 1.0);
 		}
 	}
 	else {
 		ws_normal = vec4(fs_in.nm / 2 + 1.0, 1.0);
+		// ws_normal = vec4(clamp(fs_in.nm / 2 + 1.0, vec3(0.0), vec3(1.0)), 1.0);
 	}
 	ws_tangent = vec4(fs_in.tangent, 1.0);
+	// ws_tangent = vec4(clamp(fs_in.tangent, vec3(0.0), vec3(1.0)), 1.0);
 	
 }

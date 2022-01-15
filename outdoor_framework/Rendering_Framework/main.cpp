@@ -190,6 +190,13 @@ struct {
 	bool hasNormalMap;
 	bool useNormalMap;
 } m_houses;
+struct {
+	mat4 model = mat4(1.0f);
+	vector<Shape> shapes;
+	GLuint whiteTexture;
+	bool hasNormalMap = false;
+	bool useNormalMap = false;
+} m_sphere;
 
 void m_airplane_loadModel() {
 	char* filepath = ".\\models\\airplane.obj";
@@ -503,6 +510,121 @@ void m_house_loadModel() {
 
 	cout << "Load medievalHouse.obj done" << endl;
 }
+void m_sphere_loadModel() {
+	char* filepath = ".\\models\\Sphere.obj";
+	const aiScene* scene = aiImportFile(filepath, aiProcessPreset_TargetRealtime_MaxQuality);
+	// Geometry
+	for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+	{
+		aiMesh* mesh = scene->mMeshes[i];
+		Shape shape;
+		glGenVertexArrays(1, &shape.vao);
+		glBindVertexArray(shape.vao);
+
+		vector<float> position;
+		vector<float> normal;
+		vector<float> texcoord;
+		vector<float> tangent;
+		vector<float> bittangent;
+
+		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
+		{
+			// mesh->mVertices[v][0~2] => position
+			position.push_back(mesh->mVertices[v][0]);
+			position.push_back(mesh->mVertices[v][1]);
+			position.push_back(mesh->mVertices[v][2]);
+			// mesh->mTextureCoords[0][v][0~1] => texcoord
+			texcoord.push_back(mesh->mTextureCoords[0][v][0]);
+			texcoord.push_back(mesh->mTextureCoords[0][v][1]);
+			// mesh->mNormals[v][0~2] => normal
+			normal.push_back(mesh->mNormals[v][0]);
+			normal.push_back(mesh->mNormals[v][1]);
+			normal.push_back(mesh->mNormals[v][2]);
+
+			if (mesh->HasTangentsAndBitangents()) {
+				// mesh->mTangents[v][0~2] => tangent
+				tangent.push_back(mesh->mTangents[v][0]);
+				tangent.push_back(mesh->mTangents[v][1]);
+				tangent.push_back(mesh->mTangents[v][2]);
+				// mesh->mBitangents[v][0~2] => bittangent
+				bittangent.push_back(mesh->mBitangents[v][0]);
+				bittangent.push_back(mesh->mBitangents[v][1]);
+				bittangent.push_back(mesh->mBitangents[v][2]);
+			}
+			else {
+				cout << "no tangent" << endl;
+			}
+		}
+
+		// create vbos to hold data
+		glGenBuffers(1, &shape.vbo_position);
+		glGenBuffers(1, &shape.vbo_texcoord);
+		glGenBuffers(1, &shape.vbo_normal);
+		glGenBuffers(1, &shape.vbo_tangents);
+
+		// position
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
+		glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &position[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+
+		// texcoord
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
+		glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 2 * sizeof(float), &texcoord[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(1);
+
+		// normal
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
+		glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &normal[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(2);
+
+		// tangent
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_tangents);
+		glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &tangent[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(3);
+
+		vector<unsigned int> face;
+		for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
+		{
+			// mesh->mFaces[f].mIndices[0~2] => index
+			face.push_back(mesh->mFaces[f].mIndices[0]);
+			face.push_back(mesh->mFaces[f].mIndices[1]);
+			face.push_back(mesh->mFaces[f].mIndices[2]);
+		}
+		// create 1 ibo to hold data
+		glGenBuffers(1, &shape.ibo);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->mNumFaces * 3 * sizeof(unsigned int), &face[0], GL_STATIC_DRAW);
+
+		shape.materialID = mesh->mMaterialIndex;
+		shape.drawCount = mesh->mNumFaces * 3;
+		// save shape
+		m_sphere.shapes.push_back(shape);
+
+		position.clear();
+		position.shrink_to_fit();
+		texcoord.clear();
+		texcoord.shrink_to_fit();
+		normal.clear();
+		normal.shrink_to_fit();
+		tangent.clear();
+		tangent.shrink_to_fit();
+		face.clear();
+		face.shrink_to_fit();
+	}
+
+	aiReleaseImport(scene);
+
+	TextureData normalImg = loadImg(".\\models\\textures\\defaultTexture.png");
+	glGenTextures(1, &m_sphere.whiteTexture);
+	glBindTexture(GL_TEXTURE_2D, m_sphere.whiteTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, normalImg.width, normalImg.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, normalImg.data);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	cout << "Load Sphere.obj done" << endl;
+}
 void m_objects_init() {
 	m_airplane_loadModel();
 	m_airplane.matrix.rotate = m_airplaneRotMat;
@@ -518,6 +640,10 @@ void m_objects_init() {
 	m_houses.hasNormalMap = true;
 	m_houses.useNormalMap = true;
 
+	m_sphere_loadModel();
+	m_sphere.model = translate(mat4(1.0f), vec3(636.48f, 134.79f, 495.98f));
+	m_sphere.hasNormalMap = false;
+	m_sphere.useNormalMap = false;
 
 	m_objectShader = new Shader("assets\\GenTextures_vs.vs.glsl", "assets\\GenTextures_fs.fs.glsl");
 	m_objectShader->useShader();
@@ -609,6 +735,31 @@ void m_objects_render() {
 		glBindTexture(GL_TEXTURE_2D, m_houses.normalTexture);
 
 		glDrawElements(GL_TRIANGLES, m_houses.shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+	// Sphere
+	glUniform1i(glGetUniformLocation(programID, "ubHasNormalMap"), (m_sphere.hasNormalMap) ? 1 : 0);
+	glUniform1i(glGetUniformLocation(programID, "ubUseNormalMap"), (m_sphere.useNormalMap) ? 1 : 0);
+	glUniformMatrix4fv(glGetUniformLocation(programID, "um4m"), 1, GL_FALSE, value_ptr(m_sphere.model));
+	for (int i = 0; i < m_sphere.shapes.size(); i++) {
+		int materialID = m_sphere.shapes[i].materialID;
+		glUniform3fv(glGetUniformLocation(programID, "uv3Ambient"), 1, value_ptr(vec3(1.0f)));
+		glUniform3fv(glGetUniformLocation(programID, "uv3Specular"), 1, value_ptr(vec3(1.0f)));
+		glUniform3fv(glGetUniformLocation(programID, "uv3Diffuse"), 1, value_ptr(vec3(1.0f)));
+
+		glBindVertexArray(m_sphere.shapes[i].vao);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_sphere.shapes[i].ibo);
+
+		glUniform1i(glGetUniformLocation(programID, "diffuseTexture"), 3);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, m_sphere.whiteTexture);
+		glUniform1i(glGetUniformLocation(programID, "normalTexture"), 4);
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, m_sphere.whiteTexture);
+
+		glDrawElements(GL_TRIANGLES, m_sphere.shapes[i].drawCount, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}

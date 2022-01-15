@@ -62,8 +62,8 @@ vec3 phongShading() {
 	diffuse = max(dot(fs_N, fs_L), 0.0) * diffuse_albedo;
 	specular = max(pow(dot(fs_R, fs_V), 900.0), 0.0) * specular_albedo;
 
-	float distance = length(pointLightPos - vs_P.xyz);
-	float attenuation = 50.0f / (pow(distance, 2) + 0.5);
+	float dist = distance(pointLightPos, vs_P.xyz);
+	float attenuation = 50.0f / (pow(dist, 2) + 0.5);
 	color += ((diffuse * vec3(0.8) + specular * vec3(0.2)) * attenuation);
 
 	// phongColor = vec4(color, 1.0);
@@ -73,8 +73,9 @@ vec3 phongShading() {
 void genBloomHDR(vec3 _color) {
 	
 	float brightness = dot(_color, vec3(0.8));
+	float dist = distance(texelFetch(tex_ws_position, ivec2(gl_FragCoord.xy), 0).xyz, vec3(636.48, 134.79, 495.98));
 	bloomHDR = vec4(0.0f);
-	if (brightness > 1) {
+	if (brightness > 1 && dist <= 2.0f) {
 		bloomHDR = vec4(_color, 1.0);
 	}
 	else {
