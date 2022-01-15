@@ -10,6 +10,16 @@
 #pragma comment (lib, "lib-vc2015\\glfw3.lib")
 #pragma comment (lib, "assimp\\assimp-vc140-mtd.lib")
 
+#define TEXTURE_FINAL 5
+#define TEXTURE_DIFFUSE 6
+#define TEXTURE_AMBIENT 7
+#define TEXTURE_SPECULAR 8
+#define TEXTURE_WS_POSITION 9
+#define TEXTURE_WS_NORMAL 10
+#define TEXTURE_WS_TANGENT 11
+#define TEXTURE_PHONG 12
+#define TEXTURE_BLOOMHDR 13
+
 using namespace glm;
 using namespace std;
 
@@ -148,61 +158,45 @@ TextureData loadImg(const char* path)
 	}
 	return texture;
 }
-
-char** loadShaderSource(const char* file)
-{
-	FILE* fp = fopen(file, "rb");
-	fseek(fp, 0, SEEK_END);
-	long sz = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	char *src = new char[sz + 1];
-	fread(src, sizeof(char), sz, fp);
-	src[sz] = '\0';
-	char **srcp = new char*[1];
-	srcp[0] = src;
-	return srcp;
-}
-
-void freeShaderSource(char** srcp)
-{
-	delete srcp[0];
-	delete srcp;
-}
-
-void shaderLog(GLuint shader)
-{
-	GLint isCompiled = 0;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
-	if (isCompiled == GL_FALSE)
-	{
-		GLint maxLength = 0;
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
-
-		// The maxLength includes the NULL character
-		GLchar* errorLog = new GLchar[maxLength];
-		glGetShaderInfoLog(shader, maxLength, &maxLength, &errorLog[0]);
-
-		printf("%s\n", errorLog);
-		delete[] errorLog;
-	}
-}
 #pragma endregion
 
-#pragma region Airplane
+Shader *m_objectShader = nullptr;
 struct {
-	Shader *shader = nullptr;
 	struct {
 		mat4 model = mat4(1.0f);
 		mat4 scale = mat4(1.0f);
 		mat4 rotate = mat4(1.0f);
 	} matrix;
 
+	GLuint normalTexture;
+
 	vector<Shape> shapes;
 	vector<Material> materials;
 	bool hasNormalMap;
 	bool useNormalMap;
 } m_airplane;
-void plane_loadModel() {
+struct {
+	struct {
+		mat4 model = mat4(1.0f);
+		mat4 scale = mat4(1.0f);
+		mat4 rotate = mat4(1.0f);
+	} matrixA;
+	struct {
+		mat4 model = mat4(1.0f);
+		mat4 scale = mat4(1.0f);
+		mat4 rotate = mat4(1.0f);
+	} matrixB;
+
+	GLuint normalTexture;
+
+	vector<Shape> shapes;
+	vector<Material> materials;
+
+	bool hasNormalMap;
+	bool useNormalMap;
+} m_houses;
+
+void m_airplane_loadModel() {
 	char* filepath = ".\\models\\airplane.obj";
 	const aiScene* scene = aiImportFile(filepath, aiProcessPreset_TargetRealtime_MaxQuality);
 
@@ -213,14 +207,11 @@ void plane_loadModel() {
 		aiString texturePath;
 		aiColor3D color;
 		if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS) {
-			// load width, height and data from texturePath.C_Str();
-			//string p = ".\\models\\"; /*..\\Assets\\*/
-			//texturePath = p + texturePath.C_Str();
 			cout << texturePath.C_Str() << endl;
 			TextureData tex = loadImg(texturePath.C_Str());
 			glGenTextures(1, &Material.diffuse_tex);
 			glBindTexture(GL_TEXTURE_2D, Material.diffuse_tex);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
 			glGenerateMipmap(GL_TEXTURE_2D);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -357,93 +348,7 @@ void plane_loadModel() {
 	aiReleaseImport(scene);
 	cout << "Load airplane.obj done" << endl;
 }
-void plane_init(mat4 _rotateMatrix, vec3 _position) {
-	m_airplane.matrix.rotate = _rotateMatrix;
-	m_airplane.matrix.model = translate(mat4(1.0f), _position);
-
-	plane_loadModel();
-	m_airplane.hasNormalMap = false;
-	m_airplane.useNormalMap = false;
-
-	m_airplane.shader = new Shader("assets\\GenTextures_vs.vs.glsl", "assets\\GenTextures_fs.fs.glsl");
-	m_airplane.shader->useShader();
-	const GLuint programId = m_airplane.shader->getProgramID();
-	cout << "Airplane programID: " << programId << endl;
-	glUniform1i(glGetUniformLocation(programId, "diffuseTexture"), 3);
-	glUniform1i(glGetUniformLocation(programId, "normalTexture"), 4);
-
-	m_airplane.shader->disableShader();
-}
-void plane_render() {
-	m_airplane.matrix.rotate = m_airplaneRotMat;
-	m_airplane.matrix.model = translate(mat4(1.0f), m_airplanePosition);
-
-	m_airplane.shader->useShader();
-	const GLuint programId = m_airplane.shader->getProgramID();
-	// vs
-	glUniformMatrix4fv(glGetUniformLocation(programId, "um4m"), 1, GL_FALSE, value_ptr(m_airplane.matrix.model * m_airplane.matrix.rotate));
-	glUniformMatrix4fv(glGetUniformLocation(programId, "um4v"), 1, GL_FALSE, value_ptr(m_cameraView));
-	glUniformMatrix4fv(glGetUniformLocation(programId, "um4p"), 1, GL_FALSE, value_ptr(m_cameraProjection));
-	glUniform3fv(glGetUniformLocation(programId, "uv3LightPos"), 1, value_ptr(lightPosition));
-	// fs
-	//glUniform1i(m_airplane.uniformID.ubPhongFlag, (m_airplane.blinnPhongFlag) ? 1 : 0);
-	//glUniform1i(m_airplane.uniformID.ubNormalFlag, (m_airplane.normalMappingFlag) ? 1 : 0);
-	glUniform1i(glGetUniformLocation(programId, "ubHasNormalMap"), (m_airplane.hasNormalMap) ? 1 : 0);
-	glUniform1i(glGetUniformLocation(programId, "ubUseNormalMap"), (m_airplane.useNormalMap) ? 1 : 0);
-
-	for (int i = 0; i < m_airplane.shapes.size(); i++) {
-		int materialID = m_airplane.shapes[i].materialID;
-		glUniform3fv(glGetUniformLocation(programId, "uv3Ambient"), 1, value_ptr(m_airplane.materials[materialID].ka));
-		glUniform3fv(glGetUniformLocation(programId, "uv3Specular"), 1, value_ptr(m_airplane.materials[materialID].ks));
-		glUniform3fv(glGetUniformLocation(programId, "uv3Diffuse"), 1, value_ptr(m_airplane.materials[materialID].kd));
-
-		glBindVertexArray(m_airplane.shapes[i].vao);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_airplane.shapes[i].ibo);
-
-		glUniform1i(glGetUniformLocation(programId, "diffuseTexture"), 3);
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, m_airplane.materials[materialID].diffuse_tex);
-		glUniform1i(glGetUniformLocation(programId, "normalTexture"), 4);
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, m_airplane.materials[materialID].diffuse_tex);
-
-		glDrawElements(GL_TRIANGLES, m_airplane.shapes[i].drawCount, GL_UNSIGNED_INT, 0);
-		glBindVertexArray(0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-	}
-	m_airplane.shader->disableShader();
-}
-#pragma endregion
-
-#pragma region House
-struct {
-	Shader *shaderA = nullptr;
-	Shader *shaderB = nullptr;
-	struct {
-		mat4 model = mat4(1.0f);
-		mat4 scale = mat4(1.0f);
-		mat4 rotate = mat4(1.0f);
-	} houseA_matrix;
-	struct {
-		mat4 model = mat4(1.0f);
-		mat4 scale = mat4(1.0f);
-		mat4 rotate = mat4(1.0f);
-	} houseB_matrix;
-	struct {
-		GLenum diffuse;
-		GLenum normal;
-	} texUnit;
-
-	GLuint normalTexture;
-
-	vector<Shape> shapes;
-	vector<Material> materials;
-
-	bool hasNormalMap;
-	bool useNormalMap;
-} m_houses;
-
-void house_loadModel() {
+void m_house_loadModel() {
 	char* filepath = ".\\models\\medievalHouse.obj";
 	const aiScene* scene = aiImportFile(filepath, aiProcessPreset_TargetRealtime_MaxQuality);
 
@@ -454,14 +359,11 @@ void house_loadModel() {
 		aiString texturePath;
 		aiColor3D color;
 		if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS) {
-			// load width, height and data from texturePath.C_Str();
-			//string p = ".\\models\\"; /*..\\Assets\\*/
-			//texturePath = p + texturePath.C_Str();
+
 			cout << texturePath.C_Str() << endl;
 			TextureData tex = loadImg(texturePath.C_Str());
 			glGenTextures(1, &Material.diffuse_tex);
 			glBindTexture(GL_TEXTURE_2D, Material.diffuse_tex);
-			//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
 			glGenerateMipmap(GL_TEXTURE_2D);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -603,77 +505,88 @@ void house_loadModel() {
 	glBindTexture(GL_TEXTURE_2D, m_houses.normalTexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, normalImg.width, normalImg.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, normalImg.data);
 	glGenerateMipmap(GL_TEXTURE_2D);
-	//glGenerateMipmap(GL_TEXTURE_2D);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	cout << "Load medievalHouse.obj done" << endl;
 }
-void houses_init(float a_rotateAngle, vec3 a_position, float b_rotateAngle,  vec3 b_position) {
-	m_houses.houseA_matrix.rotate = rotate(mat4(1.0f), radians(a_rotateAngle), vec3(0.0f, 1.0f, 0.0f));
-	m_houses.houseA_matrix.model = translate(mat4(1.0f), a_position);
-	m_houses.houseB_matrix.rotate = rotate(mat4(1.0f), radians(b_rotateAngle), vec3(0.0f, 1.0f, 0.0f));
-	m_houses.houseB_matrix.model = translate(mat4(1.0f), b_position);
+void m_objects_init() {
+	m_airplane_loadModel();
+	m_airplane.matrix.rotate = m_airplaneRotMat;
+	m_airplane.matrix.model = translate(mat4(1.0f), m_airplanePosition);
+	m_airplane.hasNormalMap = false;
+	m_airplane.useNormalMap = false;
 
-	house_loadModel();
+	m_house_loadModel();
+	m_houses.matrixA.rotate = rotate(mat4(1.0f), radians(60.0f), vec3(0.0f, 1.0f, 0.0f));
+	m_houses.matrixA.model = translate(mat4(1.0f), vec3(631.0f, 130.0f, 468.0f));
+	m_houses.matrixB.rotate = rotate(mat4(1.0f), radians(15.0f), vec3(0.0f, 1.0f, 0.0f));
+	m_houses.matrixB.model = translate(mat4(1.0f), vec3(656.0f, 135.0f, 483.0f));
 	m_houses.hasNormalMap = true;
-	m_houses.useNormalMap = false;
+	m_houses.useNormalMap = true;
 
-	// House A
-	m_houses.shaderA = new Shader("assets\\GenTextures_vs.vs.glsl", "assets\\GenTextures_fs.fs.glsl");
-	m_houses.shaderA->useShader();
-	const GLuint programId_A = m_houses.shaderA->getProgramID();
-	cout << "House A programID: " << programId_A << endl;
-	m_houses.texUnit.diffuse = GL_TEXTURE3;
-	glUniform1i(glGetUniformLocation(programId_A, "diffuseTexture"), 3);
-	m_houses.texUnit.normal = GL_TEXTURE4;
-	glUniform1i(glGetUniformLocation(programId_A, "normalTexture"), 4);
-	m_houses.shaderA->disableShader();
 
-	// House B
-	m_houses.shaderB = new Shader("assets\\GenTextures_vs.vs.glsl", "assets\\GenTextures_fs.fs.glsl");
-	m_houses.shaderB->useShader();
-	const GLuint programId_B = m_houses.shaderB->getProgramID();
-	cout << "House B programID: " << programId_B << endl;
-	m_houses.texUnit.diffuse = GL_TEXTURE3;
-	glUniform1i(glGetUniformLocation(programId_B, "diffuseTexture"), 3);
-	m_houses.texUnit.normal = GL_TEXTURE4;
-	glUniform1i(glGetUniformLocation(programId_B, "normalTexture"), 4);
-	m_houses.shaderB->disableShader();
+	m_objectShader = new Shader("assets\\GenTextures_vs.vs.glsl", "assets\\GenTextures_fs.fs.glsl");
+	m_objectShader->useShader();
+	const GLuint programID = m_objectShader->getProgramID();
+	cout << "Objects programID: " << programID << endl;
+	glUniform1i(glGetUniformLocation(programID, "diffuseTexture"), 3);
+	glUniform1i(glGetUniformLocation(programID, "normalTexture"), 4);
+	m_objectShader->disableShader();
 }
-void houses_render() {
-	// House A
-	m_houses.shaderA->useShader();
-	const GLuint programId_A = m_airplane.shader->getProgramID();
-	// vs
-	glUniformMatrix4fv(glGetUniformLocation(programId_A, "um4m"), 1, GL_FALSE, value_ptr(m_houses.houseA_matrix.model * m_houses.houseA_matrix.rotate));
-	glUniformMatrix4fv(glGetUniformLocation(programId_A, "um4v"), 1, GL_FALSE, value_ptr(m_cameraView));
-	glUniformMatrix4fv(glGetUniformLocation(programId_A, "um4p"), 1, GL_FALSE, value_ptr(m_cameraProjection));
-	glUniform3fv(glGetUniformLocation(programId_A, "uv3LightPos"), 1, value_ptr(lightPosition));
+void m_objects_render() {
+	m_airplane.matrix.rotate = m_airplaneRotMat;
+	m_airplane.matrix.model = translate(mat4(1.0f), m_airplanePosition);
 
-	// fs
-	//glUniform1i(this->uniformID.ubPhongFlag, (this->blinnPhongFlag) ? 1 : 0);
-	//glUniform1i(this->uniformID.ubNormalFlag, (this->normalMappingFlag) ? 1 : 0);
-	glUniform1i(glGetUniformLocation(programId_A, "ubHasNormalMap"), (m_houses.hasNormalMap) ? 1 : 0);
-	glUniform1i(glGetUniformLocation(programId_A, "ubUseNormalMap"), (m_houses.useNormalMap) ? 1 : 0);
+	m_objectShader->useShader();
+	const GLuint programID = m_objectShader->getProgramID();
 
+	glUniformMatrix4fv(glGetUniformLocation(programID, "um4v"), 1, GL_FALSE, value_ptr(m_cameraView));
+	glUniformMatrix4fv(glGetUniformLocation(programID, "um4p"), 1, GL_FALSE, value_ptr(m_cameraProjection));
+	glUniform3fv(glGetUniformLocation(programID, "uv3LightPos"), 1, value_ptr(lightPosition));
+
+	// airplane	
+	glUniformMatrix4fv(glGetUniformLocation(programID, "um4m"), 1, GL_FALSE, value_ptr(m_airplane.matrix.model * m_airplane.matrix.rotate));
+	glUniform1i(glGetUniformLocation(programID, "ubHasNormalMap"), (m_airplane.hasNormalMap) ? 1 : 0);
+	glUniform1i(glGetUniformLocation(programID, "ubUseNormalMap"), (m_airplane.useNormalMap) ? 1 : 0);
+	for (int i = 0; i < m_airplane.shapes.size(); i++) {
+		int materialID = m_airplane.shapes[i].materialID;
+		glUniform3fv(glGetUniformLocation(programID, "uv3Ambient"), 1, value_ptr(m_airplane.materials[materialID].ka));
+		glUniform3fv(glGetUniformLocation(programID, "uv3Specular"), 1, value_ptr(m_airplane.materials[materialID].ks));
+		glUniform3fv(glGetUniformLocation(programID, "uv3Diffuse"), 1, value_ptr(m_airplane.materials[materialID].kd));
+
+		glBindVertexArray(m_airplane.shapes[i].vao);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_airplane.shapes[i].ibo);
+
+		glUniform1i(glGetUniformLocation(programID, "diffuseTexture"), 3);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, m_airplane.materials[materialID].diffuse_tex);
+		glUniform1i(glGetUniformLocation(programID, "normalTexture"), 4);
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, m_airplane.materials[materialID].diffuse_tex);
+
+		glDrawElements(GL_TRIANGLES, m_airplane.shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+	// houses
+	glUniform1i(glGetUniformLocation(programID, "ubHasNormalMap"), (m_houses.hasNormalMap) ? 1 : 0);
+	glUniform1i(glGetUniformLocation(programID, "ubUseNormalMap"), (m_houses.useNormalMap) ? 1 : 0);
+	// house A
+	glUniformMatrix4fv(glGetUniformLocation(programID, "um4m"), 1, GL_FALSE, value_ptr(m_houses.matrixA.model * m_houses.matrixA.rotate));
 	for (int i = 0; i < m_houses.shapes.size(); i++) {
 		int materialID = m_houses.shapes[i].materialID;
-		glUniform3fv(glGetUniformLocation(programId_A, "uv3Ambient"), 1, value_ptr(m_houses.materials[materialID].ka));
-		glUniform3fv(glGetUniformLocation(programId_A, "uv3Specular"), 1, value_ptr(m_houses.materials[materialID].ks));
-		glUniform3fv(glGetUniformLocation(programId_A, "uv3Diffuse"), 1, value_ptr(m_houses.materials[materialID].kd));
-
+		glUniform3fv(glGetUniformLocation(programID, "uv3Ambient"), 1, value_ptr(m_houses.materials[materialID].ka));
+		glUniform3fv(glGetUniformLocation(programID, "uv3Specular"), 1, value_ptr(m_houses.materials[materialID].ks));
+		glUniform3fv(glGetUniformLocation(programID, "uv3Diffuse"), 1, value_ptr(m_houses.materials[materialID].kd));
 
 		glBindVertexArray(m_houses.shapes[i].vao);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_houses.shapes[i].ibo);
 
-		glUniform1i(glGetUniformLocation(programId_A, "diffuseTexture"), 3);
+		glUniform1i(glGetUniformLocation(programID, "diffuseTexture"), 3);
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, m_houses.materials[materialID].diffuse_tex);
 
-		glUniform1i(glGetUniformLocation(programId_A, "normalTexture"), 4);
+		glUniform1i(glGetUniformLocation(programID, "normalTexture"), 4);
 		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, m_houses.normalTexture);
 
@@ -681,38 +594,22 @@ void houses_render() {
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
-	m_houses.shaderA->disableShader();
-
-	// House B
-	m_houses.shaderB->useShader();
-	const GLuint programId_B = m_airplane.shader->getProgramID();
-	// vs
-	glUniformMatrix4fv(glGetUniformLocation(programId_B, "um4m"), 1, GL_FALSE, value_ptr(m_houses.houseB_matrix.model * m_houses.houseB_matrix.rotate));
-	glUniformMatrix4fv(glGetUniformLocation(programId_B, "um4v"), 1, GL_FALSE, value_ptr(m_cameraView));
-	glUniformMatrix4fv(glGetUniformLocation(programId_B, "um4p"), 1, GL_FALSE, value_ptr(m_cameraProjection));
-	glUniform3fv(glGetUniformLocation(programId_B, "uv3LightPos"), 1, value_ptr(lightPosition));
-
-	// fs
-	//glUniform1i(this->uniformID.ubPhongFlag, (this->blinnPhongFlag) ? 1 : 0);
-	//glUniform1i(this->uniformID.ubNormalFlag, (this->normalMappingFlag) ? 1 : 0);
-	glUniform1i(glGetUniformLocation(programId_B, "ubHasNormalMap"), (m_houses.hasNormalMap) ? 1 : 0);
-	glUniform1i(glGetUniformLocation(programId_B, "ubUseNormalMap"), (m_houses.useNormalMap) ? 1 : 0);
-
+	// house B
+	glUniformMatrix4fv(glGetUniformLocation(programID, "um4m"), 1, GL_FALSE, value_ptr(m_houses.matrixB.model * m_houses.matrixB.rotate));
 	for (int i = 0; i < m_houses.shapes.size(); i++) {
 		int materialID = m_houses.shapes[i].materialID;
-		glUniform3fv(glGetUniformLocation(programId_B, "uv3Ambient"), 1, value_ptr(m_houses.materials[materialID].ka));
-		glUniform3fv(glGetUniformLocation(programId_B, "uv3Specular"), 1, value_ptr(m_houses.materials[materialID].ks));
-		glUniform3fv(glGetUniformLocation(programId_B, "uv3Diffuse"), 1, value_ptr(m_houses.materials[materialID].kd));
-
+		glUniform3fv(glGetUniformLocation(programID, "uv3Ambient"), 1, value_ptr(m_houses.materials[materialID].ka));
+		glUniform3fv(glGetUniformLocation(programID, "uv3Specular"), 1, value_ptr(m_houses.materials[materialID].ks));
+		glUniform3fv(glGetUniformLocation(programID, "uv3Diffuse"), 1, value_ptr(m_houses.materials[materialID].kd));
 
 		glBindVertexArray(m_houses.shapes[i].vao);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_houses.shapes[i].ibo);
 
-		glUniform1i(glGetUniformLocation(programId_B, "diffuseTexture"), 3);
+		glUniform1i(glGetUniformLocation(programID, "diffuseTexture"), 3);
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, m_houses.materials[materialID].diffuse_tex);
 
-		glUniform1i(glGetUniformLocation(programId_B, "normalTexture"), 4);
+		glUniform1i(glGetUniformLocation(programID, "normalTexture"), 4);
 		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, m_houses.normalTexture);
 
@@ -720,14 +617,13 @@ void houses_render() {
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
-	m_houses.shaderB->disableShader();
-
 }
-#pragma endregion
+
 struct {
 	GLuint diffuse;
 	GLuint ambient;
 	GLuint specular;
+
 	GLuint ws_position;
 	GLuint ws_normal;
 	GLuint ws_tangent;
@@ -735,13 +631,11 @@ struct {
 	GLuint phongColor;
 	GLuint bloomHDR;
 
-	GLuint bloomColor;
-	GLuint displayColor;
+	GLuint finalTex;
 } frameBufferTexture;
 
-int DISPLAY;
+int CURRENT_TEX = TEXTURE_FINAL; // Default as FINAL
 
-#pragma region WindowFrame
 struct {
 	Shader* shader;
 	GLuint vao;
@@ -753,11 +647,7 @@ float window_positions[16] = {
 		-1.0f,  1.0f,  0.0f,  1.0f,
 		 1.0f,  1.0f,  1.0f,  1.0f
 };
-void window_init() {
-	m_windowFrame.shader = new Shader("assets\\windowFrame_vertex.vs.glsl", "assets\\windowFrame_fragment.fs.glsl");
-	//m_windowFrame.shader->useShader();
-	//const GLuint programId = m_windowFrame.shader->getProgramID();
-	cout << "Window programID: " << m_windowFrame.shader->getProgramID() << endl;
+void m_window_init() {
 	glGenVertexArrays(1, &m_windowFrame.vao);
 	glBindVertexArray(m_windowFrame.vao);
 
@@ -772,24 +662,77 @@ void window_init() {
 
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	//m_windowFrame.shader->disableShader();
-}
-
-void window_render(GLuint texture) {
-	glClearColor(0.5f, 0.5f, 1.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+	
+	m_windowFrame.shader = new Shader("assets\\Window_vs.vs.glsl", "assets\\Window_fs.fs.glsl");
 	m_windowFrame.shader->useShader();
-	glUniform1i(glGetUniformLocation(m_windowFrame.shader->getProgramID(), "tex"), 20);
-	glActiveTexture(GL_TEXTURE20);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	const GLuint programID = m_windowFrame.shader->getProgramID();
+	cout << "Window programID: " << programID << endl;
+	glUniform1i(glGetUniformLocation(programID, "currentTex"), CURRENT_TEX);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_diffuse"), 6);
+	glActiveTexture(GL_TEXTURE6);
+	glUniform1i(glGetUniformLocation(programID, "tex_ambient"), 7);
+	glActiveTexture(GL_TEXTURE7);
+	glUniform1i(glGetUniformLocation(programID, "tex_specular"), 8);
+	glActiveTexture(GL_TEXTURE8);
+	glUniform1i(glGetUniformLocation(programID, "tex_ws_position"), 9);
+	glActiveTexture(GL_TEXTURE9);
+	glUniform1i(glGetUniformLocation(programID, "tex_ws_normal"), 10);
+	glActiveTexture(GL_TEXTURE10);
+	glUniform1i(glGetUniformLocation(programID, "tex_ws_tangent"), 11);
+	glActiveTexture(GL_TEXTURE11);
+	glUniform1i(glGetUniformLocation(programID, "tex_phong"), 12);
+	glActiveTexture(GL_TEXTURE12);
+	glUniform1i(glGetUniformLocation(programID, "tex_bloomHDR"), 13);
+	glActiveTexture(GL_TEXTURE13);
+	m_windowFrame.shader->disableShader();
+}
+void m_window_render() {
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+	m_windowFrame.shader->useShader();
+	const GLuint programID = m_windowFrame.shader->getProgramID();
+
+	glUniform1i(glGetUniformLocation(programID, "currentTex"), CURRENT_TEX);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_diffuse"), 6);
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_ambient"), 7);
+	glActiveTexture(GL_TEXTURE7);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ambient);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_specular"), 8);
+	glActiveTexture(GL_TEXTURE8);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.specular);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_ws_position"), 9);
+	glActiveTexture(GL_TEXTURE9);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_position);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_ws_normal"), 10);
+	glActiveTexture(GL_TEXTURE10);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_normal);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_ws_tangent"), 11);
+	glActiveTexture(GL_TEXTURE11);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_tangent);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_phong"), 12);
+	glActiveTexture(GL_TEXTURE12);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.phongColor);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_bloomHDR"), 13);
+	glActiveTexture(GL_TEXTURE13);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.bloomHDR);
+
 	glBindVertexArray(m_windowFrame.vao);
 
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 	m_windowFrame.shader->disableShader();
 }
-#pragma endregion
-
 
 struct {
 	GLuint fbo;
@@ -874,6 +817,10 @@ void genTexture_bindFrameBuffer() {
 	glClearBufferfv(GL_COLOR, 0, green);
 	glClearBufferfv(GL_DEPTH, 0, &one);
 }
+void genTexture_init() {
+	glGenFramebuffers(1, &m_genTexture.fbo);
+	genTexture_setBuffer();
+}
 
 struct {
 	Shader *shader;
@@ -931,69 +878,61 @@ void deferred_bindFrameBuffer() {
 void deferred_init() {
 	glGenFramebuffers(1, &m_deferred.fbo);
 	deferred_setBuffer();
+
 	m_deferred.shader = new Shader("assets\\Deferred_vs.vs.glsl", "assets\\Deferred_fs.fs.glsl");
 	m_deferred.shader->useShader();
-	const GLuint programId = m_deferred.shader->getProgramID();
-	cout << "m_deferred programID: " << programId << endl;
-	glUniform3fv(glGetUniformLocation(programId, "uv3LightPos"), 1, value_ptr(lightPosition));
-	glUniform3fv(glGetUniformLocation(programId, "uv3eyePos"), 1, value_ptr(m_eye));
-
-	glUniform1i(glGetUniformLocation(programId, "tex_diffuse"), 10);
+	const GLuint programID = m_deferred.shader->getProgramID();
+	cout << "m_deferred programID: " << programID << endl;
+	glUniform3fv(glGetUniformLocation(programID, "uv3LightPos"), 1, value_ptr(lightPosition));
+	glUniform3fv(glGetUniformLocation(programID, "uv3eyePos"), 1, value_ptr(m_eye));
+	
+	glUniform1i(glGetUniformLocation(programID, "tex_diffuse"), 6);
+	glActiveTexture(GL_TEXTURE6);
+	glUniform1i(glGetUniformLocation(programID, "tex_ambient"), 7);
+	glActiveTexture(GL_TEXTURE7);
+	glUniform1i(glGetUniformLocation(programID, "tex_specular"), 8);
+	glActiveTexture(GL_TEXTURE8);
+	glUniform1i(glGetUniformLocation(programID, "tex_ws_position"), 9);
+	glActiveTexture(GL_TEXTURE9);
+	glUniform1i(glGetUniformLocation(programID, "tex_ws_normal"), 10);
 	glActiveTexture(GL_TEXTURE10);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
-
-	glUniform1i(glGetUniformLocation(programId, "tex_ambient"), 11);
+	glUniform1i(glGetUniformLocation(programID, "tex_ws_tangent"), 11);
 	glActiveTexture(GL_TEXTURE11);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
 
-	glUniform1i(glGetUniformLocation(programId, "tex_specular"), 12);
-	glActiveTexture(GL_TEXTURE12);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
-
-	glUniform1i(glGetUniformLocation(programId, "tex_ws_position"), 13);
-	glActiveTexture(GL_TEXTURE13);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
-
-	glUniform1i(glGetUniformLocation(programId, "tex_ws_normal"), 14);
-	glActiveTexture(GL_TEXTURE14);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
-
-	glUniform1i(glGetUniformLocation(programId, "tex_ws_tangent"), 15);
-	glActiveTexture(GL_TEXTURE15);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
+	m_deferred.shader->disableShader();
 }
 void deferred_render() {
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	m_deferred.shader->useShader();
-	const GLuint programId = m_deferred.shader->getProgramID();
-	glUniform3fv(glGetUniformLocation(programId, "uv3LightPos"), 1, value_ptr(lightPosition));
-	glUniform3fv(glGetUniformLocation(programId, "uv3eyePos"), 1, value_ptr(m_eye));
+	const GLuint programID = m_deferred.shader->getProgramID();
+	glUniform3fv(glGetUniformLocation(programID, "uv3LightPos"), 1, value_ptr(lightPosition));
+	glUniform3fv(glGetUniformLocation(programID, "uv3eyePos"), 1, value_ptr(m_eye));
 
-	glUniform1i(glGetUniformLocation(programId, "tex_diffuse"), 10);
+	glUniform1i(glGetUniformLocation(programID, "tex_diffuse"), 6);
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_ambient"), 7);
+	glActiveTexture(GL_TEXTURE7);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ambient);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_specular"), 8);
+	glActiveTexture(GL_TEXTURE8);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.specular);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_ws_position"), 9);
+	glActiveTexture(GL_TEXTURE9);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_position);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_ws_normal"), 10);
 	glActiveTexture(GL_TEXTURE10);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_normal);
 
-	glUniform1i(glGetUniformLocation(programId, "tex_ambient"), 11);
+	glUniform1i(glGetUniformLocation(programID, "tex_ws_tangent"), 11);
 	glActiveTexture(GL_TEXTURE11);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
-
-	glUniform1i(glGetUniformLocation(programId, "tex_specular"), 12);
-	glActiveTexture(GL_TEXTURE12);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
-
-	glUniform1i(glGetUniformLocation(programId, "tex_ws_position"), 13);
-	glActiveTexture(GL_TEXTURE13);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
-
-	glUniform1i(glGetUniformLocation(programId, "tex_ws_normal"), 14);
-	glActiveTexture(GL_TEXTURE14);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
-
-	glUniform1i(glGetUniformLocation(programId, "tex_ws_tangent"), 15);
-	glActiveTexture(GL_TEXTURE15);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_tangent);
 
 	glBindVertexArray(m_windowFrame.vao);
 
@@ -1001,93 +940,6 @@ void deferred_render() {
 	m_deferred.shader->disableShader();
 }
 
-struct {
-	Shader *shader;
-	GLuint fbo;
-	GLuint depthRBO;
-} m_bloom;
-void bloom_setBuffer() {
-	glDeleteRenderbuffers(1, &m_bloom.depthRBO);
-	glDeleteTextures(1, &frameBufferTexture.bloomColor);
-	// Render Buffer
-	glGenRenderbuffers(1, &m_bloom.depthRBO);
-	glBindRenderbuffer(GL_RENDERBUFFER, m_bloom.depthRBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
-
-	// Frame Buffer
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_bloom.fbo);
-	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_bloom.depthRBO);
-
-	//// Texture | 0: bloomColor
-	// bloomColor
-	glGenTextures(1, &frameBufferTexture.bloomColor);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.bloomColor);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameBufferTexture.bloomColor, 0);
-
-	// finally check if framebuffer is complete
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "Framebuffer not complete!" << std::endl;
-}
-void bloom_bindFrameBuffrer() {
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_bloom.fbo);
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	static const GLfloat pink[] = { 1.0f, 1.0f, 0.0f, 1.0f };
-	static const GLfloat one = 1.0f;
-
-	glClearBufferfv(GL_COLOR, 0, pink);
-	glClearBufferfv(GL_DEPTH, 0, &one);
-}
-void bloom_init() {
-	glGenFramebuffers(1, &m_bloom.fbo);
-	bloom_setBuffer();
-	m_bloom.shader = new Shader("assets\\Bloom_vs.vs.glsl", "assets\\Bloom_fs.fs.glsl");
-	cout << "m_bloom programID: " << m_bloom.shader->getProgramID() << endl;
-}
-void bloom_render() {
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-	m_bloom.shader->useShader();
-	const GLuint programId = m_bloom.shader->getProgramID();
-
-	glUniform1i(glGetUniformLocation(programId, "DISPLAY"), DISPLAY);
-
-	glUniform1i(glGetUniformLocation(programId, "tex_bloomHDR"), 3);
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.bloomHDR);
-	glUniform1i(glGetUniformLocation(programId, "tex_phongColor"), 4);
-	glActiveTexture(GL_TEXTURE4);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.phongColor);
-	glUniform1i(glGetUniformLocation(programId, "tex_diffuse"), 5);
-	glActiveTexture(GL_TEXTURE5);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
-	glUniform1i(glGetUniformLocation(programId, "tex_ambient"), 6);
-	glActiveTexture(GL_TEXTURE6);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ambient);
-	glUniform1i(glGetUniformLocation(programId, "tex_specular"), 7);
-	glActiveTexture(GL_TEXTURE7);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.specular);
-	glUniform1i(glGetUniformLocation(programId, "tex_ws_position"), 8);
-	glActiveTexture(GL_TEXTURE8);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_position);
-	glUniform1i(glGetUniformLocation(programId, "tex_ws_normal"), 9);
-	glActiveTexture(GL_TEXTURE9);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_normal);
-	glUniform1i(glGetUniformLocation(programId, "tex_ws_tangent"), 10);
-	glActiveTexture(GL_TEXTURE10);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_tangent);
-
-	glBindVertexArray(m_windowFrame.vao);
-
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-	m_bloom.shader->disableShader();
-}
 
 int main() {
 	glfwInit();
@@ -1181,7 +1033,6 @@ void vsyncEnabled(GLFWwindow *window) {
 	}
 }
 
-GLuint currentTexture = frameBufferTexture.diffuse;
 void initializeGL() {
 	m_renderer = new SceneRenderer();
 	m_renderer->initialize(FRAME_WIDTH, FRAME_HEIGHT);
@@ -1192,16 +1043,11 @@ void initializeGL() {
 	m_lookDirection = m_lookAtCenter - m_eye;
 
 	initScene();
-	plane_init(m_airplaneRotMat, m_airplanePosition);
-	houses_init(60.0f, vec3(631.0f, 130.0f, 468.0f), 15.0f, vec3(656.0f, 135.0f, 483.0f));
-	window_init();
+	m_objects_init();
+	m_window_init();
 	
-	glGenFramebuffers(1, &m_genTexture.fbo);
-	genTexture_setBuffer();
+	genTexture_init();
 	deferred_init();
-	bloom_init();
-
-	currentTexture = frameBufferTexture.phongColor;
 
 	m_cameraProjection = perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
@@ -1213,7 +1059,6 @@ void resizeGL(GLFWwindow *window, int w, int h) {
 	m_renderer->resize(w, h);
 	genTexture_setBuffer();
 	deferred_setBuffer();
-	bloom_setBuffer();
 	m_cameraProjection = perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
 }
@@ -1248,17 +1093,13 @@ void paintGL() {
 	// render terrain
 	m_renderer->renderPass();
 	// [TODO] implement your rendering function here
-	plane_render();
-	houses_render();
+	m_objects_render();
 	
 	deferred_bindFrameBuffer();
 	deferred_render();
 
-	bloom_bindFrameBuffrer();
-	bloom_render();
-	
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-	// window_render(currentTexture);
+	m_window_render();
 }
 
 ////////////////////////////////////////////////
@@ -1354,39 +1195,40 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 			cout << "Input center(split with space): " << endl;
 			break;
 		case GLFW_KEY_1:
-			// currentTexture = frameBufferTexture.diffuse;
-			DISPLAY = 1;
-			cout << "Texture is [Diffuse]" << endl;
+			CURRENT_TEX = TEXTURE_FINAL;
+			cout << "Texture is [FINAL]" << endl;
 			break;
 		case GLFW_KEY_2:
-			// currentTexture = frameBufferTexture.ambient;
-			DISPLAY = 2;
-			cout << "Texture is [Ambient]" << endl;
+			CURRENT_TEX = TEXTURE_DIFFUSE;
+			cout << "Texture is [DIFFUSE]" << endl;
 			break;
 		case GLFW_KEY_3:
-			// currentTexture = frameBufferTexture.specular;
-			DISPLAY = 3;
-			cout << "Texture is [Specular]" << endl;
+			CURRENT_TEX = TEXTURE_AMBIENT;
+			cout << "Texture is [AMBIENT]" << endl;
 			break;
 		case GLFW_KEY_4:
-			// currentTexture = frameBufferTexture.ws_position;
-			DISPLAY = 4;
-			cout << "Texture is [ws_position]" << endl;
+			CURRENT_TEX = TEXTURE_SPECULAR;
+			cout << "Texture is [SPECULAR]" << endl;
 			break;
 		case GLFW_KEY_5:
-			// currentTexture = frameBufferTexture.ws_normal;
-			DISPLAY = 5;
-			cout << "Texture is [ws_normal]" << endl;
+			CURRENT_TEX = TEXTURE_WS_POSITION;
+			cout << "Texture is [WS_POSITION]" << endl;
 			break;
 		case GLFW_KEY_6:
-			// currentTexture = frameBufferTexture.phongColor;
-			DISPLAY = 6;
-			cout << "Texture is [phongColor]" << endl;
+			CURRENT_TEX = TEXTURE_WS_NORMAL;
+			cout << "Texture is [WS_NORMAL]" << endl;
 			break;
 		case GLFW_KEY_7:
-			// currentTexture = frameBufferTexture.bloomColor;
-			DISPLAY = 7;
-			cout << "Texture is [bloomColor]" << endl;
+			CURRENT_TEX = TEXTURE_WS_TANGENT;
+			cout << "Texture is [TANGENT]" << endl;
+			break;
+		case GLFW_KEY_8:
+			CURRENT_TEX = TEXTURE_PHONG;
+			cout << "Texture is [PHONG]" << endl;
+			break;
+		case GLFW_KEY_9:
+			CURRENT_TEX = TEXTURE_BLOOMHDR;
+			cout << "Texture is [BLOOMHDR]" << endl;
 			break;
 		default:
 			break;
