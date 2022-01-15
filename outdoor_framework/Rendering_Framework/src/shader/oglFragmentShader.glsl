@@ -31,9 +31,9 @@ void renderTerrain(){
 	// get terrain color
 	vec4 terrainColor = texture(texture0, f_uv.rg) ;				
 	// apply fog
-	// vec4 fColor = withFog(terrainColor) ;
+	vec4 fColor = withFog(terrainColor) ;
+	// vec4 fColor = terrainColor;
 	
-	vec4 fColor = terrainColor;
 	fColor.a = 1.0 ;
 	diffuse_color = fColor ;
 	ambient_color = fColor;

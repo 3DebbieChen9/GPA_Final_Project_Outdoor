@@ -55,8 +55,6 @@ vec2 m_rotateAngle = vec2(0.0f, 0.0f);
 mat4 lightView(1.0f);
 mat4 lightProjection(1.0f);
 vec3 lightPosition = vec3(0.2f, 0.6f, 0.5f);
-// Shadow
-//mat4 scale_bias_matrix = translate(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f)) * scale(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f));
 #pragma endregion
 
 void vsyncEnabled(GLFWwindow *window);
@@ -266,6 +264,7 @@ void plane_loadModel() {
 		vector<float> texcoord;
 		vector<float> tangent;
 		vector<float> bittangent;
+
 		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
 		{
 			// mesh->mVertices[v][0~2] => position
@@ -289,6 +288,9 @@ void plane_loadModel() {
 				bittangent.push_back(mesh->mBitangents[v][0]);
 				bittangent.push_back(mesh->mBitangents[v][1]);
 				bittangent.push_back(mesh->mBitangents[v][2]);
+			}
+			else {
+				cout << "no tanagent" << endl; 
 			}
 		}
 
@@ -367,7 +369,9 @@ void plane_init(mat4 _rotateMatrix, vec3 _position) {
 	m_airplane.shader->useShader();
 
 	const GLuint programId = m_airplane.shader->getProgramID();
-	glUniform1i(glGetUniformLocation(programId, "tex_diffuse"), 3);
+	glUniform1i(glGetUniformLocation(programId, "diffuseTexture"), 3);
+	glUniform1i(glGetUniformLocation(programId, "normalTexture"), 4);
+
 	m_airplane.shader->disableShader();
 }
 void plane_render() {
@@ -398,6 +402,9 @@ void plane_render() {
 
 		glUniform1i(glGetUniformLocation(programId, "diffuseTexture"), 3);
 		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, m_airplane.materials[materialID].diffuse_tex);
+		glUniform1i(glGetUniformLocation(programId, "normalTexture"), 4);
+		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, m_airplane.materials[materialID].diffuse_tex);
 
 		glDrawElements(GL_TRIANGLES, m_airplane.shapes[i].drawCount, GL_UNSIGNED_INT, 0);
@@ -499,6 +506,7 @@ void house_loadModel() {
 		vector<float> texcoord;
 		vector<float> tangent;
 		vector<float> bittangent;
+
 		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
 		{
 			// mesh->mVertices[v][0~2] => position
@@ -522,6 +530,9 @@ void house_loadModel() {
 				bittangent.push_back(mesh->mBitangents[v][0]);
 				bittangent.push_back(mesh->mBitangents[v][1]);
 				bittangent.push_back(mesh->mBitangents[v][2]);
+			}
+			else {
+				cout << "no tangent" << endl;
 			}
 		}
 
@@ -714,7 +725,6 @@ void houses_render() {
 }
 #pragma endregion
 
-
 #pragma region WindowFrame
 struct {
 	Shader* shader;
@@ -748,7 +758,7 @@ void window_init() {
 	//m_windowFrame.shader->disableShader();
 }
 void window_render(GLuint texture) {
-	glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(0.5f, 0.5f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	m_windowFrame.shader->useShader();
@@ -790,13 +800,13 @@ void genTexture_setBuffer() {
 	glDeleteTextures(1, &frameBufferTexture.ws_tangent);
 
 	// Render Buffer
-	glGenRenderbuffers(1, &m_genTexture.depthRBO);
-	glBindRenderbuffer(GL_RENDERBUFFER, m_genTexture.depthRBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
+	// glGenRenderbuffers(1, &m_genTexture.depthRBO);
+	// glBindRenderbuffer(GL_RENDERBUFFER, m_genTexture.depthRBO);
+	// glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
 
 	// Frame Buffer
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_genTexture.fbo);
-	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_genTexture.depthRBO);
+	// glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_genTexture.depthRBO);
 
 	//// Texture | 0: diffuse 1: ambient 2: specular 3: ws_position 4: ws_normal 5: ws_tangent
 	// diffuse
@@ -872,13 +882,13 @@ void deferred_setBuffer() {
 	glDeleteTextures(1, &frameBufferTexture.bloomHDR);
 
 	// Render Buffer
-	glGenRenderbuffers(1, &m_deferred.depthRBO);
-	glBindRenderbuffer(GL_RENDERBUFFER, m_deferred.depthRBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
+	// glGenRenderbuffers(1, &m_deferred.depthRBO);
+	// glBindRenderbuffer(GL_RENDERBUFFER, m_deferred.depthRBO);
+	// glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
 
 	// Frame Buffer
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_deferred.fbo);
-	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_deferred.depthRBO);
+	//glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_deferred.depthRBO);
 
 	//// Texture | 0: phongColor 1: bloomHDR
 	// phongColor
@@ -920,12 +930,13 @@ void deferred_init() {
 	m_deferred.shader = new Shader("assets\\Deferred_vs.vs.glsl", "assets\\Deferred_fs.fs.glsl");
 }
 void deferred_render() {
-	glClearColor(0.5f, 0.0f, 0.5f, 1.0f);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	m_deferred.shader->useShader();
 	const GLuint programId = m_deferred.shader->getProgramID();
 	glUniform3fv(glGetUniformLocation(programId, "uv3LightPos"), 1, value_ptr(lightPosition));
+	glUniform3fv(glGetUniformLocation(programId, "uv3eyePos"), 1, value_ptr(m_eye));
 
 	glUniform1i(glGetUniformLocation(programId, "tex_diffuse"), 3);
 	glActiveTexture(GL_TEXTURE3);
@@ -962,18 +973,17 @@ struct {
 	GLuint fbo;
 	GLuint depthRBO;
 } m_bloom;
-
 void bloom_setBuffer() {
 	glDeleteRenderbuffers(1, &m_bloom.depthRBO);
 	glDeleteTextures(1, &frameBufferTexture.bloomColor);
 	// Render Buffer
-	glGenRenderbuffers(1, &m_bloom.depthRBO);
-	glBindRenderbuffer(GL_RENDERBUFFER, m_bloom.depthRBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
+	// glGenRenderbuffers(1, &m_bloom.depthRBO);
+	// glBindRenderbuffer(GL_RENDERBUFFER, m_bloom.depthRBO);
+	// glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
 
 	// Frame Buffer
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_bloom.fbo);
-	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_bloom.depthRBO);
+	// glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_bloom.depthRBO);
 
 	//// Texture | 0: bloomColor
 	// bloomColor
@@ -1006,7 +1016,7 @@ void bloom_init() {
 	m_bloom.shader = new Shader("assets\\Bloom_vs.vs.glsl", "assets\\Bloom_fs.fs.glsl");
 }
 void bloom_render() {
-	glClearColor(0.5f, 0.5f, 1.0f, 1.0f);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	m_bloom.shader->useShader();
@@ -1178,7 +1188,6 @@ void updateState() {
 	updateAirplane(m_cameraView);
 }
 
-
 void paintGL() {
 
 	genTexture_bindFrameBuffer();
@@ -1197,7 +1206,6 @@ void paintGL() {
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	window_render(currentTexture);
 }
-
 
 ////////////////////////////////////////////////
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
@@ -1287,6 +1295,9 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		case GLFW_KEY_Z:
 			m_houses.useNormalMap = !m_houses.useNormalMap;
 			cout << "House use normal texture" << endl;
+			break;
+		case GLFW_KEY_C:
+			cout << "Input center(split with space): " << endl;
 			break;
 		case GLFW_KEY_1:
 			currentTexture = frameBufferTexture.diffuse;
