@@ -19,14 +19,14 @@ in VS_OUT
 	//vec3 tangent;
 } fs_in;
 
-uniform bool ubPhongFlag;
-uniform sampler2D tex;
+//uniform bool ubPhongFlag;
+uniform sampler2D tex_diffuse;
 
 uniform vec3 uv3Ambient;
 uniform vec3 uv3Diffuse;
 uniform vec3 uv3Specular;
 
-vec3 texColor = texture(tex, fs_in.texcoord).rgb;
+vec3 texColor = texture(tex_diffuse, fs_in.texcoord).rgb;
 
 void blinnPhong() {
 	vec3 ambient_albedo = texColor;
@@ -54,10 +54,11 @@ void blinnPhong() {
 
 void main()
 {
-	if (ubPhongFlag) {
+	/*if (ubPhongFlag) {
 		blinnPhong();
 	}
 	else {
 		fragColor = vec4(texColor, 1.0);
-	}
+	}*/
+	fragColor = vec4(texColor, 1.0);
 }

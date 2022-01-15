@@ -8,7 +8,6 @@ layout(location = 3) in vec3 iv3tangent;
 uniform mat4 um4m;
 uniform mat4 um4v;
 uniform mat4 um4p;
-uniform mat4 um4Lightmvp;
 uniform vec3 uv3LightPos;
 
 out VS_OUT

@@ -13,17 +13,17 @@ in VS_OUT
 	//vec3 normal;
 } fs_in;
 
-uniform bool ubPhongFlag;
-uniform bool ubNormalFlag;
+//uniform bool ubPhongFlag;
+//uniform bool ubNormalFlag;
 
-uniform sampler2D tex;
-uniform sampler2D texNormal;
+uniform sampler2D tex_diffuse;
+uniform sampler2D tex_normal;
 
 uniform vec3 uv3Ambient;
 uniform vec3 uv3Diffuse;
 uniform vec3 uv3Specular;
 
-vec3 texColor = texture(tex, fs_in.texcoord).rgb;
+vec3 texColor = texture(tex_diffuse, fs_in.texcoord).rgb;
 
 void blinnPhong() {
 
@@ -53,7 +53,7 @@ void blinnPhong() {
 void normalMapping() {
 	vec3 V = normalize(fs_in.eyeDir);
 	vec3 L = normalize(fs_in.lightDir);
-	vec3 N = normalize(texture(texNormal, fs_in.texcoord).rgb * 2.0 - vec3(1.0));
+	vec3 N = normalize(texture(tex_normal, fs_in.texcoord).rgb * 2.0 - vec3(1.0));
 
 	// Calculate R ready for use in Phong lighting.
 	vec3 R = reflect(-L, N); 
@@ -73,7 +73,7 @@ void normalMapping() {
 
 void main()
 {
-	if (ubPhongFlag) {
+	/*if (ubPhongFlag) {
 		blinnPhong();
 	}
 	else if (ubNormalFlag) {
@@ -81,5 +81,6 @@ void main()
 	}
 	else {
 		fragColor = vec4(texColor, 1.0);
-	}
+	}*/
+	fragColor = vec4(texColor, 1.0);
 }

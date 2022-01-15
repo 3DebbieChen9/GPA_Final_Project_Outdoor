@@ -86,8 +86,6 @@ struct Shape
 struct Material
 {
 	GLuint diffuse_tex;
-	GLuint ambient_tex;
-	GLuint specular_tex;
 	glm::vec4 ka;
 	glm::vec4 kd;
 	glm::vec4 ks;
@@ -192,18 +190,6 @@ void shaderLog(GLuint shader)
 }
 #pragma endregion
 
-#pragma region Object
-class ObjectClass {
-public:
-	// Constructor / Destructor
-	ObjectClass() {};
-	~ObjectClass() {};
-
-
-};
-#pragma endregion
-
-
 #pragma region Airplane Class
 class AirplaneClass {
 public:
@@ -211,52 +197,38 @@ public:
 	 AirplaneClass() {};
     ~AirplaneClass() {};
 
-	// Struct
-	typedef struct struct_uniformID {
+	Shader *m_shader;
+	struct {
 		// vs
 		GLint um4m;
 		GLint um4v;
 		GLint um4p;
-		GLint um4Lightmvp;
+
 		GLint uv3LightPos;
 		// fs
-		//GLint texLoc_diffuse;
-		//GLint texLoc_ambient;
-		//GLint texLoc_specular;
-		GLint texLoc;
+		GLint texLoc_diffuse;
+
 		GLint uv3Ambient;
 		GLint uv3Specular;
 		GLint uv3Diffuse;
-		GLint ubPhongFlag;
-	};
-	typedef struct struct_matrix {
+	} uniformID;
+
+	struct {
 		mat4 model = mat4(1.0f);
 		mat4 scale = mat4(1.0f);
 		mat4 rotate = mat4(1.0f);
-	};
+	} matrix;
 
-private:
-    GLuint programID;
-    struct_matrix matrix;
-    vector<Shape> shapes;
-    vector<Material> materials;
+	struct {
+		GLenum diffuse;
+	} texUnit;
 
-public:
-    bool blinnPhongFlag;
-	struct_uniformID uniformID;
-	//struct
-	//{
-	//	GLint diffuse;
-	//	GLint ambient;
-	//	GLint specular;
-	//	GLint worldVertex;
-	//	GLint worldNormal;
-	//} texture;
+	vector<Shape> shapes;
+	vector<Material> materials;
 
 private:
     void loadModel();
-    void getUniformLocation();
-	void linkProgram();
+	void setUpShader();
 
 public:
 	void initial(mat4 _rotateMatrix, vec3 _position);
@@ -416,64 +388,43 @@ void AirplaneClass::loadModel() {
     cout << "Load airplane.obj done" << endl;
 }
 
-void AirplaneClass::getUniformLocation() {
-    // vs
-	this->uniformID.um4m = glGetUniformLocation(this->programID, "um4m");
-	this->uniformID.um4v = glGetUniformLocation(this->programID, "um4v");
-	this->uniformID.um4p = glGetUniformLocation(this->programID, "um4p");
-	this->uniformID.um4Lightmvp = glGetUniformLocation(this->programID, "um4Lightmvp");
-	this->uniformID.uv3LightPos = glGetUniformLocation(this->programID, "uv3LightPos");
-	// fs
-	//this->uniformID.texLoc_diffuse = glGetUniformLocation(this->programID, "tex_diffuse");
-	//this->uniformID.texLoc_ambient = glGetUniformLocation(this->programID, "tex_ambient");
-	//this->uniformID.texLoc_specular = glGetUniformLocation(this->programID, "tex_specular");
-	this->uniformID.texLoc = glGetUniformLocation(this->programID, "tex");
-	this->uniformID.ubPhongFlag = glGetUniformLocation(this->programID, "ubPhongFlag");
-	this->uniformID.uv3Ambient = glGetUniformLocation(this->programID, "uv3Ambient");
-	this->uniformID.uv3Specular = glGetUniformLocation(this->programID, "uv3Specular");
-	this->uniformID.uv3Diffuse = glGetUniformLocation(this->programID, "uv3Diffuse");
-}
+void AirplaneClass::setUpShader() {
+	this->m_shader = new Shader("assets\\airplane_vertex.vs.glsl", "assets\\airplane_fragment.fs.glsl");
+	this->m_shader->useShader();
 
-void AirplaneClass::linkProgram() {
-	// Create Shader Program
-	this->programID = glCreateProgram();
-	// Create customize shader by tell openGL specify shader type 
-	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-	// Load shader file
-	//char** vs_source = loadShaderSource(".\\assets\\geometry_vs.vs.glsl");
-	//char** fs_source = loadShaderSource(".\\assets\\geometry_fs.fs.glsl");
-	char** vs_source = loadShaderSource(".\\assets\\airplane_vertex.vs.glsl");
-	char** fs_source = loadShaderSource(".\\assets\\airplane_fragment.fs.glsl");
-	// Assign content of these shader files to those shaders we created before
-	glShaderSource(vs, 1, vs_source, NULL);
-	glShaderSource(fs, 1, fs_source, NULL);
-	// Free the shader file string(won't be used any more)
-	freeShaderSource(vs_source);
-	freeShaderSource(fs_source);
-	// Compile these shaders
-	glCompileShader(vs);
-	glCompileShader(fs);
-	// Logging
-	shaderLog(vs);
-	shaderLog(fs);
-	// Assign the program we created before with these shaders
-	glAttachShader(this->programID, vs);
-	glAttachShader(this->programID, fs);
-	glLinkProgram(this->programID);
-	// It is not required to hande the shader in memory
-   	glDeleteShader(vs);
-   	glDeleteShader(fs);
+	const GLuint programId = this->m_shader->getProgramID();
+
+#pragma region Get Unifrom Location
+	// vs
+	this->uniformID.um4m = glGetUniformLocation(programId, "um4m");
+	this->uniformID.um4v = glGetUniformLocation(programId, "um4v");
+	this->uniformID.um4p = glGetUniformLocation(programId, "um4p");
+	// fs
+	this->uniformID.uv3LightPos = glGetUniformLocation(programId, "uv3LightPos");
+
+	this->uniformID.texLoc_diffuse = glGetUniformLocation(programId, "tex_diffuse");
+
+	this->uniformID.uv3Ambient = glGetUniformLocation(programId, "uv3Ambient");
+	this->uniformID.uv3Specular = glGetUniformLocation(programId, "uv3Specular");
+	this->uniformID.uv3Diffuse = glGetUniformLocation(programId, "uv3Diffuse");
+
+#pragma endregion
+
+#pragma region Default Pass Unifrom
+	this->texUnit.diffuse = GL_TEXTURE3;
+	glUniform1i(this->uniformID.texLoc_diffuse, 3);
+#pragma endregion
+
+	this->m_shader->disableShader();
 }
 
 void AirplaneClass::initial(mat4 _rotateMatrix, vec3 _position) {
 	this->matrix.rotate = _rotateMatrix;
     this->matrix.model = translate(mat4(1.0f), _position);
 
-    this->blinnPhongFlag = false;
+    //this->blinnPhongFlag = false;
 	
-	this->linkProgram();
-	this->getUniformLocation();
+	this->setUpShader();
     this->loadModel();
 }
 
@@ -481,37 +432,34 @@ void AirplaneClass::render() {
    	this->matrix.rotate = m_airplaneRotMat;
 	this->matrix.model = translate(mat4(1.0f), m_airplanePosition);
 
-	glUseProgram(this->programID);
+	this->m_shader->useShader();
 	// vs
 	glUniformMatrix4fv(this->uniformID.um4m, 1, GL_FALSE, value_ptr(this->matrix.model * this->matrix.rotate));
 	glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(m_cameraView));
 	glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(m_cameraProjection));
-	glUniformMatrix4fv(this->uniformID.um4Lightmvp, 1, GL_FALSE, value_ptr(scale_bias_matrix * lightProjection * lightView * this->matrix.model * this->matrix.scale * this->matrix.rotate));
 	glUniform3fv(this->uniformID.uv3LightPos, 1, value_ptr(vec3(0.2f, 0.6f, 0.5f)));
 	// fs
-	glUniform1i(this->uniformID.ubPhongFlag, (this->blinnPhongFlag) ? 1 : 0);
-	
+	//glUniform1i(this->uniformID.ubPhongFlag, (this->blinnPhongFlag) ? 1 : 0);
+	//glUniform1i(this->uniformID.ubNormalFlag, (this->normalMappingFlag) ? 1 : 0);
+
 	for (int i = 0; i < this->shapes.size(); i++) {
 		int materialID = this->shapes[i].materialID;
 		glUniform3fv(this->uniformID.uv3Ambient, 1, value_ptr(this->materials[materialID].ka));
 		glUniform3fv(this->uniformID.uv3Specular, 1, value_ptr(this->materials[materialID].ks));
 		glUniform3fv(this->uniformID.uv3Diffuse, 1, value_ptr(this->materials[materialID].kd));
-		
+
 		glBindVertexArray(this->shapes[i].vao);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->shapes[i].ibo);
 
-		glUniform1i(this->uniformID.texLoc, 3);
+		glUniform1i(this->uniformID.texLoc_diffuse, 3);
 		glActiveTexture(GL_TEXTURE3);
-		//glUniform1i(this->uniformID.texLoc_diffuse, 3);
-		//glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, this->materials[materialID].diffuse_tex);
-		
+
 		glDrawElements(GL_TRIANGLES, this->shapes[i].drawCount, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
-	glUseProgram(0);
-	glBindVertexArray(0);
+	this->m_shader->disableShader();
 }
 #pragma endregion
 
@@ -522,45 +470,44 @@ public:
 	 HouseClass() {};
     ~HouseClass() {};
 
-	// Struct
-	typedef struct struct_uniformID {
+	Shader *m_shader;
+	struct {
 		// vs
 		GLint um4m;
 		GLint um4v;
 		GLint um4p;
-		GLint um4Lightmvp;
+
 		GLint uv3LightPos;
 		// fs
-		GLint texLoc;
+		GLint texLoc_diffuse;
 		GLint texLoc_normal;
+
 		GLint uv3Ambient;
 		GLint uv3Specular;
 		GLint uv3Diffuse;
-		GLint ubPhongFlag;
-		GLint ubNormalFlag;
-	};
-	typedef struct struct_matrix {
+	} uniformID;
+	struct {
 		mat4 model = mat4(1.0f);
 		mat4 scale = mat4(1.0f);
 		mat4 rotate = mat4(1.0f);
-	};
+	} matrix;
+	struct {
+		GLenum diffuse;
+		GLenum normal;
+	} texUnit;
 
-private:
-    GLuint programID;
-    struct_uniformID uniformID;
-    struct_matrix matrix;
-    vector<Shape> shapes;
-    vector<Material> materials;
 	GLuint normalTexture;
 
-public:
-    bool blinnPhongFlag;
-	bool normalMappingFlag;
+	vector<Shape> shapes;
+	vector<Material> materials;
+
+//public:
+//    bool blinnPhongFlag;
+//	bool normalMappingFlag;
 
 private:
     void loadModel();
-    void getUniformLocation();
-	void linkProgram();
+	void setUpShader();
 
 public:
 	void initial(float _rotateAngle, vec3 _position);
@@ -732,102 +679,83 @@ void HouseClass::loadModel() {
     cout << "Load medievalHouse.obj done" << endl;
 }
 
-void HouseClass::getUniformLocation() {
-	// vs
-	this->uniformID.um4m = glGetUniformLocation(this->programID, "um4m");
-	this->uniformID.um4v = glGetUniformLocation(this->programID, "um4v");
-	this->uniformID.um4p = glGetUniformLocation(this->programID, "um4p");
-	this->uniformID.um4Lightmvp = glGetUniformLocation(this->programID, "um4Lightmvp");
-	this->uniformID.uv3LightPos = glGetUniformLocation(this->programID, "uv3LightPos");
-	// fs
-	this->uniformID.texLoc = glGetUniformLocation(this->programID, "tex");
-	this->uniformID.texLoc_normal = glGetUniformLocation(this->programID, "texNormal");
-	this->uniformID.ubPhongFlag = glGetUniformLocation(this->programID, "ubPhongFlag");
-	this->uniformID.ubNormalFlag = glGetUniformLocation(this->programID, "ubNormalFlag");
-	this->uniformID.uv3Ambient = glGetUniformLocation(this->programID, "uv3Ambient");
-	this->uniformID.uv3Specular = glGetUniformLocation(this->programID, "uv3Specular");
-	this->uniformID.uv3Diffuse = glGetUniformLocation(this->programID, "uv3Diffuse");
-}
+void HouseClass::setUpShader() {
+	this->m_shader = new Shader("assets\\house_vertex.vs.glsl", "assets\\house_fragment.fs.glsl");
+	this->m_shader->useShader();
 
-void HouseClass::linkProgram() {
-	// Create Shader Program
-	this->programID = glCreateProgram();
-	// Create customize shader by tell openGL specify shader type 
-	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-	// Load shader file
-	char** vs_source = loadShaderSource(".\\assets\\house_vertex.vs.glsl");
-	char** fs_source = loadShaderSource(".\\assets\\house_fragment.fs.glsl");
-	// Assign content of these shader files to those shaders we created before
-	glShaderSource(vs, 1, vs_source, NULL);
-	glShaderSource(fs, 1, fs_source, NULL);
-	// Free the shader file string(won't be used any more)
-	freeShaderSource(vs_source);
-	freeShaderSource(fs_source);
-	// Compile these shaders
-	glCompileShader(vs);
-	glCompileShader(fs);
-	// Logging
-	shaderLog(vs);
-	shaderLog(fs);
-	// Assign the program we created before with these shaders
-	glAttachShader(this->programID, vs);
-	glAttachShader(this->programID, fs);
-	glLinkProgram(this->programID);
-	// It is not required to hande the shader in memory
-   	glDeleteShader(vs);
-   	glDeleteShader(fs);
+	const GLuint programId = this->m_shader->getProgramID();
+
+#pragma region Get Unifrom Location
+	// vs
+	this->uniformID.um4m = glGetUniformLocation(programId, "um4m");
+	this->uniformID.um4v = glGetUniformLocation(programId, "um4v");
+	this->uniformID.um4p = glGetUniformLocation(programId, "um4p");
+	// fs
+	this->uniformID.uv3LightPos = glGetUniformLocation(programId, "uv3LightPos");
+
+	this->uniformID.texLoc_diffuse = glGetUniformLocation(programId, "tex_diffuse");
+	this->uniformID.texLoc_normal = glGetUniformLocation(programId, "tex_normal");
+
+	this->uniformID.uv3Ambient = glGetUniformLocation(programId, "uv3Ambient");
+	this->uniformID.uv3Specular = glGetUniformLocation(programId, "uv3Specular");
+	this->uniformID.uv3Diffuse = glGetUniformLocation(programId, "uv3Diffuse");
+
+#pragma endregion
+
+#pragma region Default Pass Unifrom
+	this->texUnit.diffuse = GL_TEXTURE3;
+	glUniform1i(this->uniformID.texLoc_diffuse, 3);
+	this->texUnit.normal = GL_TEXTURE4;
+	glUniform1i(this->uniformID.texLoc_normal, 4);
+#pragma endregion
+
+	this->m_shader->disableShader();
 }
 
 void HouseClass::initial(float _rotateAngle, vec3 _position) {
 	this->matrix.rotate = rotate(mat4(1.0f), radians(_rotateAngle), vec3(0.0f, 1.0f, 0.0f));
 	this->matrix.model = translate(mat4(1.0f), _position);
 	
-	this->blinnPhongFlag = false;
-	this->normalMappingFlag = false;
+	//this->blinnPhongFlag = false;
+	//this->normalMappingFlag = false;
 	
-	this->linkProgram();
-	this->getUniformLocation();
+	this->setUpShader();
     this->loadModel();
 }
 
 void HouseClass::render() {
-	glUseProgram(this->programID);
+	this->m_shader->useShader();
 	// vs
 	glUniformMatrix4fv(this->uniformID.um4m, 1, GL_FALSE, value_ptr(this->matrix.model * this->matrix.rotate));
 	glUniformMatrix4fv(this->uniformID.um4v, 1, GL_FALSE, value_ptr(m_cameraView));
 	glUniformMatrix4fv(this->uniformID.um4p, 1, GL_FALSE, value_ptr(m_cameraProjection));
-	glUniformMatrix4fv(this->uniformID.um4Lightmvp, 1, GL_FALSE, value_ptr(scale_bias_matrix * lightProjection * lightView * this->matrix.model * this->matrix.scale * this->matrix.rotate));
 	glUniform3fv(this->uniformID.uv3LightPos, 1, value_ptr(vec3(0.2f, 0.6f, 0.5f)));
 	// fs
-	glUniform1i(this->uniformID.ubPhongFlag, (this->blinnPhongFlag) ? 1 : 0);
-	glUniform1i(this->uniformID.ubNormalFlag, (this->normalMappingFlag) ? 1 : 0);
+	//glUniform1i(this->uniformID.ubPhongFlag, (this->blinnPhongFlag) ? 1 : 0);
+	//glUniform1i(this->uniformID.ubNormalFlag, (this->normalMappingFlag) ? 1 : 0);
 
 	for (int i = 0; i < this->shapes.size(); i++) {
 		int materialID = this->shapes[i].materialID;
 		glUniform3fv(this->uniformID.uv3Ambient, 1, value_ptr(this->materials[materialID].ka));
 		glUniform3fv(this->uniformID.uv3Specular, 1, value_ptr(this->materials[materialID].ks));
 		glUniform3fv(this->uniformID.uv3Diffuse, 1, value_ptr(this->materials[materialID].kd));
-		
+
 		glBindVertexArray(this->shapes[i].vao);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->shapes[i].ibo);
-		
-		glUniform1i(this->uniformID.texLoc, 3);
+
+		glUniform1i(this->uniformID.texLoc_diffuse, 3);
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, this->materials[materialID].diffuse_tex);
-		
+
 		glUniform1i(this->uniformID.texLoc_normal, 4);
 		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, this->normalTexture);
-		
+
 		glDrawElements(GL_TRIANGLES, this->shapes[i].drawCount, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
-	
-
-	glUseProgram(0);
-	glBindVertexArray(0);
+	this->m_shader->disableShader();
 }
 
 #pragma endregion
@@ -1086,6 +1014,18 @@ void WindowFrameClass::render(GLuint texture) {
 
 #pragma endregion
 
+GLuint dPosition, dNormal, dAmbient, dColor, dSpecular, ddiffuse, dBloom;
+struct {
+	Shader* shader;
+	GLuint buffer;
+	GLuint depthRBO;
+	//GLint texLoc_diffuse;
+	//GLint depthMap;
+} m_deferred;
+
+void init_deferred();
+void render_deferred();
+
 
 AirplaneClass m_airplane;
 HouseClass m_houseA;
@@ -1197,10 +1137,11 @@ void initializeGL() {
 
 	initScene();
 	m_airplane.initial(m_airplaneRotMat, m_airplanePosition);
-	m_houseA.initial(60.0f, vec3(631.0f, 130.0f, 468.0f));
-	m_houseB.initial(15.0f, vec3(656.0f, 135.0f, 483.0f));
-	m_window.initial();
-	m_frameBuffer_test.initial();
+	init_deferred();
+	//m_houseA.initial(60.0f, vec3(631.0f, 130.0f, 468.0f));
+	//m_houseB.initial(15.0f, vec3(656.0f, 135.0f, 483.0f));
+	//m_window.initial();
+	//m_frameBuffer_test.initial();
 
 	m_cameraProjection = perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
@@ -1208,10 +1149,13 @@ void initializeGL() {
 void resizeGL(GLFWwindow *window, int w, int h) {
 	FRAME_WIDTH = w;
 	FRAME_HEIGHT = h;
-	m_frameBuffer_test.setBuffer();
+	glViewport(0, 0, w, h);
+	//m_frameBuffer_test.setBuffer();
 	m_renderer->resize(w, h);
 	m_cameraProjection = perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
+
+	init_deferred();
 }
 
 
@@ -1248,18 +1192,31 @@ void paintGL() {
 	// [TODO] implement your rendering function here
 	// glViewport(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
 
-	m_frameBuffer_test.framebufferRender();
+	//m_frameBuffer_test.framebufferRender();
 
-	//if (m_terrainOn) {
-	//	m_renderer->renderPass();
-	//}
-	//m_renderer->renderPass();
-	m_airplane.render();
-	m_houseA.render();
-	m_houseB.render();
+	////if (m_terrainOn) {
+	////	m_renderer->renderPass();
+	////}
+	////m_renderer->renderPass();
+	//m_airplane.render();
+	////m_houseA.render();
+	////m_houseB.render();
 
-	m_frameBuffer_test.framebufferRenderEnd();
-	m_window.render(m_frameBuffer_test.FBODataTexture);
+	//m_frameBuffer_test.framebufferRenderEnd();
+
+	//glBindTexture(GL_TEXTURE_2D, dPosition);
+	//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_deferred.buffer);
+	//glDrawBuffer(GL_COLOR_ATTACHMENT0);
+
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	//static const GLfloat green[] = { 0.0f, 0.25f, 0.0f, 1.0f };
+	//static const GLfloat one = 1.0f;
+
+	//glClearBufferfv(GL_COLOR, 0, green);
+	//glClearBufferfv(GL_DEPTH, 0, &one);
+	render_deferred();
+	//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	//m_window.render(m_frameBuffer_test.FBODataTexture);
 
 }
 
@@ -1350,15 +1307,15 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		switch (key)
 		{
 		case GLFW_KEY_Z:
-			m_airplane.blinnPhongFlag = !m_airplane.blinnPhongFlag;
-			m_houseA.blinnPhongFlag = !m_houseA.blinnPhongFlag;
-			m_houseB.blinnPhongFlag = !m_houseB.blinnPhongFlag;
-			cout << "Phong Shading: " << m_airplane.blinnPhongFlag << endl;
+			//m_airplane.blinnPhongFlag = !m_airplane.blinnPhongFlag;
+			//m_houseA.blinnPhongFlag = !m_houseA.blinnPhongFlag;
+			//m_houseB.blinnPhongFlag = !m_houseB.blinnPhongFlag;
+			//cout << "Phong Shading: " << m_airplane.blinnPhongFlag << endl;
 			break;
 		case GLFW_KEY_X:
-			m_houseA.normalMappingFlag = !m_houseA.normalMappingFlag;
-			m_houseB.normalMappingFlag = !m_houseB.normalMappingFlag;
-			cout << "Normal Mapping: " << m_houseA.normalMappingFlag << endl;
+			//m_houseA.normalMappingFlag = !m_houseA.normalMappingFlag;
+			//m_houseB.normalMappingFlag = !m_houseB.normalMappingFlag;
+			//cout << "Normal Mapping: " << m_houseA.normalMappingFlag << endl;
 			break;
 		case GLFW_KEY_C:
 			m_terrainOn = !m_terrainOn;
@@ -1432,4 +1389,112 @@ void adjustCameraPositionWithTerrain() {
 		m_lookAtCenter.y = ty + 3.0;
 		m_eye.y = m_eye.y + (ty + 3.0 - cp.y);
 	}
+}
+
+void init_deferred() {
+	m_deferred.shader = new Shader("assets\\deferred_vs.vs.glsl", "assets\\deferred_fs.fs.glsl");
+	m_deferred.shader->useShader();
+	const GLuint programId = m_deferred.shader->getProgramID();
+	glUniform1i(glGetUniformLocation(programId, "diffuseTexture"), 3);
+
+	glGenFramebuffers(1, &m_deferred.buffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_deferred.buffer);
+
+	glGenTextures(1, &dPosition);
+	glBindTexture(GL_TEXTURE_2D, dPosition);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dPosition, 0);
+
+	glGenTextures(1, &dNormal);
+	glBindTexture(GL_TEXTURE_2D, dNormal);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, dNormal, 0);
+
+	glGenTextures(1, &dAmbient);
+	glBindTexture(GL_TEXTURE_2D, dAmbient);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, dAmbient, 0);
+
+	glGenTextures(1, &ddiffuse);
+	glBindTexture(GL_TEXTURE_2D, ddiffuse);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, ddiffuse, 0);
+
+	glGenTextures(1, &dSpecular);
+	glBindTexture(GL_TEXTURE_2D, dSpecular);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, dSpecular, 0);
+
+	glGenTextures(1, &dColor);
+	glBindTexture(GL_TEXTURE_2D, dColor);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, dColor, 0);
+
+	glGenTextures(1, &dBloom);
+	glBindTexture(GL_TEXTURE_2D, dBloom);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, GL_TEXTURE_2D, dBloom, 0);
+
+	unsigned int attachments[7] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6 };
+	glDrawBuffers(7, attachments);
+
+	glGenRenderbuffers(1, &m_deferred.depthRBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, m_deferred.depthRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, FRAME_WIDTH, FRAME_HEIGHT);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_deferred.depthRBO);
+	// finally check if framebuffer is complete
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "Framebuffer not complete!" << std::endl;
+}
+
+void render_deferred() {
+	m_deferred.shader->useShader();
+	const GLuint programId = m_deferred.shader->getProgramID();
+	//glEnable(GL_DEPTH_TEST);
+	//glDepthFunc(GL_LEQUAL);
+	//glBindFramebuffer(GL_FRAMEBUFFER, m_deferred.buffer);
+
+	//glViewport(0, 0, FRAME_WIDTH, FRAME_WIDTH);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glUniformMatrix4fv(glGetUniformLocation(programId, "um4m"), 1, GL_FALSE, value_ptr(m_airplane.matrix.model * m_airplane.matrix.rotate));
+	glUniformMatrix4fv(glGetUniformLocation(programId, "um4v"), 1, GL_FALSE, value_ptr(m_cameraView));
+	glUniformMatrix4fv(glGetUniformLocation(programId, "um4p"), 1, GL_FALSE, value_ptr(m_cameraProjection));
+	
+	for (int i = 0; i < m_airplane.shapes.size(); i++) {
+		int materialID = m_airplane.shapes[i].materialID;
+		glUniform3fv(glGetUniformLocation(programId, "uv3Ambient"), 1, value_ptr(m_airplane.materials[materialID].ka));
+		glUniform3fv(glGetUniformLocation(programId, "uv3Diffuse"), 1, value_ptr(m_airplane.materials[materialID].ks));
+		glUniform3fv(glGetUniformLocation(programId, "uv3Specular"), 1, value_ptr(m_airplane.materials[materialID].kd));
+
+		glBindVertexArray(m_airplane.shapes[i].vao);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_airplane.shapes[i].ibo);
+
+		glUniform1i(glGetUniformLocation(programId, "diffuseTexture"), 3);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, m_airplane.materials[materialID].diffuse_tex);
+
+		glUniform3fv(glGetUniformLocation(programId, "light_pos"), 1, &lightPosition[0]);
+		glUniform3fv(glGetUniformLocation(programId, "view_pos"), 1, &m_eye[0]);
+
+		glDrawElements(GL_TRIANGLES, m_airplane.shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+	m_deferred.shader->disableShader();
 }
