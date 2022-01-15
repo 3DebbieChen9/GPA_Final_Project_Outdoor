@@ -940,7 +940,6 @@ void deferred_render() {
 	m_deferred.shader->disableShader();
 }
 
-
 int main() {
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -1189,10 +1188,17 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		{
 		case GLFW_KEY_Z:
 			m_houses.useNormalMap = !m_houses.useNormalMap;
-			cout << "House use normal texture" << endl;
+			cout << "House use/unuse normal texture" << endl;
+			break;
+		case GLFW_KEY_X:
+			cout << endl << "Input eye (split with space): " << endl;
+			scanf("%f %f %f", &m_eye[0], &m_eye[1], &m_eye[2]);
+			cout << "Current eye at (" << m_eye[0] << ", " << m_eye[1] << ", " << m_eye[2] << ")" << endl;
 			break;
 		case GLFW_KEY_C:
-			cout << "Input center(split with space): " << endl;
+			cout << endl << "Input look-at center (split with space): " << endl;
+			scanf("%f %f %f", &m_lookAtCenter[0], &m_lookAtCenter[1], &m_lookAtCenter[2]);
+			cout << endl << "Current look-at center at (" << m_lookAtCenter[0] << ", " << m_lookAtCenter[1] << ", " << m_lookAtCenter[2] << ")" << endl;
 			break;
 		case GLFW_KEY_1:
 			CURRENT_TEX = TEXTURE_FINAL;
