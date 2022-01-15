@@ -50,3 +50,29 @@
 
 ### Normal Mapping 
 - `z`: Switch whether the houses have applied Normal Mapping
+
+### Current Texture Display
+- `TEXTURE_FINAL`
+  ![](https://i.imgur.com/HfGBRZZ.jpg)
+- `TEXTURE_DIFFUSE`
+  ![](https://i.imgur.com/04mvZjr.jpg)
+- `TEXTURE_AMBIENT`
+  ![](https://i.imgur.com/5KOJCaz.png)
+- `TEXTURE_SPECULAR`
+  ![](https://i.imgur.com/edYfkLi.png)
+- `TEXTURE_WS_POSITION`
+  > 我已經有用 `clamp` 處理了，但還是全白OAO
+
+  ![](https://i.imgur.com/zdonjrD.png)
+- `TEXTURE_WS_NORMAL`
+  - With normal map
+  ![](https://i.imgur.com/gLLt4Ay.jpg)
+  - Without normal map
+  ![](https://i.imgur.com/pYo7nIx.png)
+- `TEXTURE_WS_TANGENT`
+  ![](https://i.imgur.com/UqnGd26.png)
+- `TEXTURE_PHONG`
+  ![](https://i.imgur.com/AWXr3Gb.jpg)
+  ![](https://i.imgur.com/Mnj53N7.jpg)
+- `TEXTURE_BLOOMHDR`
+  ![](https://i.imgur.com/TzK8D6v.png)
