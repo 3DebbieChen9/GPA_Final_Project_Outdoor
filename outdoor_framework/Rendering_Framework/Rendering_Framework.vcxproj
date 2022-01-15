@@ -44,12 +44,10 @@
   <ItemGroup>
     <None Include="assets\GenTextures_fs.fs.glsl" />
     <None Include="assets\GenTextures_vs.vs.glsl" />
-    <None Include="assets\PhongShading_fs.fs.glsl" />
-    <None Include="assets\PhongShading_vs.vs.glsl" />
-    <None Include="assets\geometry_fs.fs.glsl" />
-    <None Include="assets\geometry_vs.vs.glsl" />
-    <None Include="assets\house_fragment.fs.glsl" />
-    <None Include="assets\house_vertex.vs.glsl" />
+    <None Include="assets\Deferred_fs.fs.glsl" />
+    <None Include="assets\Deferred_vs.vs.glsl" />
+    <None Include="assets\Bloom_fs.fs.glsl" />
+    <None Include="assets\Bloom_vs.vs.glsl" />
     <None Include="assets\windowFrame_fragment.fs.glsl" />
     <None Include="assets\windowFrame_vertex.vs.glsl" />
   </ItemGroup>

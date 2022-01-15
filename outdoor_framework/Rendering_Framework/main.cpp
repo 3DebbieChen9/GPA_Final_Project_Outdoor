@@ -902,7 +902,7 @@ void deferred_setBuffer() {
 		std::cout << "Framebuffer not complete!" << std::endl;
 }
 void deferred_bindFrameBuffer() {
-	const GLenum colorBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+	const GLenum colorBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_deferred.fbo);
 	glDrawBuffers(2, colorBuffers);
 
@@ -953,7 +953,74 @@ void deferred_render() {
 	glBindVertexArray(m_windowFrame.vao);
 
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-	m_windowFrame.shader->disableShader();
+	m_deferred.shader->disableShader();
+}
+
+struct {
+	Shader *shader;
+	GLuint fbo;
+	GLuint depthRBO;
+} m_bloom;
+
+void bloom_setBuffer() {
+	glDeleteRenderbuffers(1, &m_bloom.depthRBO);
+	glDeleteTextures(1, &frameBufferTexture.bloomColor);
+	// Render Buffer
+	glGenRenderbuffers(1, &m_bloom.depthRBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, m_bloom.depthRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
+
+	// Frame Buffer
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_bloom.fbo);
+	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_bloom.depthRBO);
+
+	//// Texture | 0: bloomColor
+	// bloomColor
+	glGenTextures(1, &frameBufferTexture.bloomColor);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.bloomColor);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameBufferTexture.bloomColor, 0);
+
+	// finally check if framebuffer is complete
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "Framebuffer not complete!" << std::endl;
+}
+void bloom_bindFrameBuffrer() {
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_bloom.fbo);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	static const GLfloat pink[] = { 1.0f, 1.0f, 0.0f, 1.0f };
+	static const GLfloat one = 1.0f;
+
+	glClearBufferfv(GL_COLOR, 0, pink);
+	glClearBufferfv(GL_DEPTH, 0, &one);
+}
+void bloom_init() {
+	glGenFramebuffers(1, &m_bloom.fbo);
+	bloom_setBuffer();
+	m_bloom.shader = new Shader("assets\\Bloom_vs.vs.glsl", "assets\\Bloom_fs.fs.glsl");
+}
+void bloom_render() {
+	glClearColor(0.5f, 0.5f, 1.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	m_bloom.shader->useShader();
+	const GLuint programId = m_bloom.shader->getProgramID();
+
+	glUniform1i(glGetUniformLocation(programId, "tex_bloomHDR"), 3);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.bloomHDR);
+	glUniform1i(glGetUniformLocation(programId, "tex_phongColor"), 4);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.phongColor);
+
+	glBindVertexArray(m_windowFrame.vao);
+
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	m_bloom.shader->disableShader();
 }
 
 int main() {
@@ -1066,9 +1133,9 @@ void initializeGL() {
 	glGenFramebuffers(1, &m_genTexture.fbo);
 	genTexture_setBuffer();
 	deferred_init();
-	
+	bloom_init();
 
-	currentTexture = frameBufferTexture.diffuse;
+	currentTexture = frameBufferTexture.phongColor;
 
 	m_cameraProjection = perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
@@ -1078,6 +1145,9 @@ void resizeGL(GLFWwindow *window, int w, int h) {
 	FRAME_HEIGHT = h;
 	glViewport(0, 0, w, h);
 	m_renderer->resize(w, h);
+	genTexture_setBuffer();
+	deferred_setBuffer();
+	bloom_setBuffer();
 	m_cameraProjection = perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
 }
@@ -1119,9 +1189,8 @@ void paintGL() {
 	deferred_bindFrameBuffer();
 	deferred_render();
 
-	// bloom_blindFrameBuffer();
-	// blooom draw
-	
+	bloom_bindFrameBuffrer();
+	bloom_render();
 	
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	window_render(currentTexture);
@@ -1214,17 +1283,6 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		switch (key)
 		{
 		case GLFW_KEY_Z:
-			//m_airplane.blinnPhongFlag = !m_airplane.blinnPhongFlag;
-			//m_houseA.blinnPhongFlag = !m_houseA.blinnPhongFlag;
-			//m_houseB.blinnPhongFlag = !m_houseB.blinnPhongFlag;
-			//cout << "Phong Shading: " << m_airplane.blinnPhongFlag << endl;
-			break;
-		case GLFW_KEY_X:
-			//m_houseA.normalMappingFlag = !m_houseA.normalMappingFlag;
-			//m_houseB.normalMappingFlag = !m_houseB.normalMappingFlag;
-			//cout << "Normal Mapping: " << m_houseA.normalMappingFlag << endl;
-			break;
-		case GLFW_KEY_C:
 			m_houses.useNormalMap = !m_houses.useNormalMap;
 			cout << "House use normal texture" << endl;
 			break;
