@@ -42,10 +42,10 @@
     <ClInclude Include="src\Terrain.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="assets\airplane_fragment.fs.glsl" />
-    <None Include="assets\airplane_vertex.vs.glsl" />
     <None Include="assets\GenTextures_fs.fs.glsl" />
-    <None Include="assets\GenTextures_vs.glsl" />
+    <None Include="assets\GenTextures_vs.vs.glsl" />
+    <None Include="assets\PhongShading_fs.fs.glsl" />
+    <None Include="assets\PhongShading_vs.vs.glsl" />
     <None Include="assets\geometry_fs.fs.glsl" />
     <None Include="assets\geometry_vs.vs.glsl" />
     <None Include="assets\house_fragment.fs.glsl" />

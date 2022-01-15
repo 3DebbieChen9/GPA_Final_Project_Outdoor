@@ -14,6 +14,7 @@ out VS_OUT{
 	vec3 ambient_color;
 	vec3 specular_color;
 	vec3 diffuse_color; // diffuse color from mtl
+	vec3 tangent;
 } vs_out;
 
 uniform mat4 um4m;
@@ -25,11 +26,12 @@ uniform vec3 uv3Specular;
 
 void main() {
 	gl_Position = um4p * um4v * um4m * vec4(iv3position, 1.0);
-	vs_out.nm = iv3normal * mat3(um4m);
+	vs_out.nm = mat3(um4m) * iv3normal;
 	vs_out.ps = (um4m * vec4(iv3position, 1.0)).xyz;
 	vs_out.N = iv3normal;
 	vs_out.FragPos = vec3(um4m * vec4(iv3position, 1.0));
 	vs_out.texcoord = iv2tex_coord;
+	vs_out.tangent = mat3(um4m) * iv3tangent;
 	vs_out.diffuse_color = uv3Diffuse;
 	vs_out.specular_color = uv3Specular;
 	vs_out.ambient_color = uv3Ambient;

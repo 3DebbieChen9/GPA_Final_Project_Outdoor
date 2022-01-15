@@ -729,8 +729,8 @@ float window_positions[16] = {
 };
 void window_init() {
 	m_windowFrame.shader = new Shader("assets\\windowFrame_vertex.vs.glsl", "assets\\windowFrame_fragment.fs.glsl");
-	m_windowFrame.shader->useShader();
-	const GLuint programId = m_windowFrame.shader->getProgramID();
+	//m_windowFrame.shader->useShader();
+	//const GLuint programId = m_windowFrame.shader->getProgramID();
 	glGenVertexArrays(1, &m_windowFrame.vao);
 	glBindVertexArray(m_windowFrame.vao);
 
@@ -745,7 +745,7 @@ void window_init() {
 
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	m_windowFrame.shader->disableShader();
+	//m_windowFrame.shader->disableShader();
 }
 void window_render(GLuint texture) {
 	glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
@@ -768,31 +768,37 @@ struct {
 	GLuint specular;
 	GLuint ws_position;
 	GLuint ws_normal;
-	//GLuint dBloom;
+	GLuint ws_tangent;
+
+	GLuint phongColor;
+	GLuint bloomHDR;
+
+	GLuint bloomColor;
 } frameBufferTexture;
 
 struct {
 	GLuint fbo;
 	GLuint depthRBO;
-} m_deferred;
-void deferred_init() {
-	glDeleteRenderbuffers(1, &m_deferred.depthRBO);
+} m_genTexture;
+void genTexture_setBuffer() {
+	glDeleteRenderbuffers(1, &m_genTexture.depthRBO);
 	glDeleteTextures(1, &frameBufferTexture.diffuse);
 	glDeleteTextures(1, &frameBufferTexture.ambient);
 	glDeleteTextures(1, &frameBufferTexture.specular);
 	glDeleteTextures(1, &frameBufferTexture.ws_position);
 	glDeleteTextures(1, &frameBufferTexture.ws_normal);
+	glDeleteTextures(1, &frameBufferTexture.ws_tangent);
 
 	// Render Buffer
-	glGenRenderbuffers(1, &m_deferred.depthRBO);
-	glBindRenderbuffer(GL_RENDERBUFFER, m_deferred.depthRBO);
+	glGenRenderbuffers(1, &m_genTexture.depthRBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, m_genTexture.depthRBO);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
 
 	// Frame Buffer
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_deferred.fbo);
-	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_deferred.depthRBO);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_genTexture.fbo);
+	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_genTexture.depthRBO);
 
-	//// Texture | 0: diffuse 1: ambient 2: specular 3: ws_position 4: ws_normal
+	//// Texture | 0: diffuse 1: ambient 2: specular 3: ws_position 4: ws_normal 5: ws_tangent
 	// diffuse
 	glGenTextures(1, &frameBufferTexture.diffuse);
 	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
@@ -828,16 +834,23 @@ void deferred_init() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, frameBufferTexture.ws_normal, 0);
+	// ws_tangent
+	glGenTextures(1, &frameBufferTexture.ws_tangent);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_tangent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, frameBufferTexture.ws_tangent, 0);
 	
 	// finally check if framebuffer is complete
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "Framebuffer not complete!" << std::endl;
 }
-void deferred_render() {
+void genTexture_bindFrameBuffer() {
 	//glBindTexture(GL_TEXTURE_2D, frameBufferTexture.dColor);
-	const GLenum colorBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_deferred.fbo);
-	glDrawBuffers(5, colorBuffers);
+	const GLenum colorBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5 };
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_genTexture.fbo);
+	glDrawBuffers(6, colorBuffers);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	static const GLfloat green[] = { 0.0f, 0.25f, 0.0f, 1.0f };
@@ -845,6 +858,102 @@ void deferred_render() {
 
 	glClearBufferfv(GL_COLOR, 0, green);
 	glClearBufferfv(GL_DEPTH, 0, &one);
+}
+
+struct {
+	Shader *shader;
+	GLuint fbo;
+	GLuint depthRBO;
+} m_deferred;
+
+void deferred_setBuffer() {
+	glDeleteRenderbuffers(1, &m_deferred.depthRBO);
+	glDeleteTextures(1, &frameBufferTexture.phongColor);
+	glDeleteTextures(1, &frameBufferTexture.bloomHDR);
+
+	// Render Buffer
+	glGenRenderbuffers(1, &m_deferred.depthRBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, m_deferred.depthRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
+
+	// Frame Buffer
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_deferred.fbo);
+	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_deferred.depthRBO);
+
+	//// Texture | 0: phongColor 1: bloomHDR
+	// phongColor
+	glGenTextures(1, &frameBufferTexture.phongColor);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.phongColor);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameBufferTexture.phongColor, 0);
+
+	// bloomHDR
+	glGenTextures(1, &frameBufferTexture.bloomHDR);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.bloomHDR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, frameBufferTexture.bloomHDR, 0);
+
+	// finally check if framebuffer is complete
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "Framebuffer not complete!" << std::endl;
+}
+void deferred_bindFrameBuffer() {
+	const GLenum colorBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_deferred.fbo);
+	glDrawBuffers(2, colorBuffers);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	static const GLfloat blue[] = { 0.0f, 0.0f, 0.5f, 1.0f };
+	static const GLfloat one = 1.0f;
+
+	glClearBufferfv(GL_COLOR, 0, blue);
+	glClearBufferfv(GL_DEPTH, 0, &one);
+}
+void deferred_init() {
+	glGenFramebuffers(1, &m_deferred.fbo);
+	deferred_setBuffer();
+	m_deferred.shader = new Shader("assets\\Deferred_vs.vs.glsl", "assets\\Deferred_fs.fs.glsl");
+}
+void deferred_render() {
+	glClearColor(0.5f, 0.0f, 0.5f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	m_deferred.shader->useShader();
+	const GLuint programId = m_deferred.shader->getProgramID();
+	glUniform3fv(glGetUniformLocation(programId, "uv3LightPos"), 1, value_ptr(lightPosition));
+
+	glUniform1i(glGetUniformLocation(programId, "tex_diffuse"), 3);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
+
+	glUniform1i(glGetUniformLocation(programId, "tex_ambient"), 4);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ambient);
+
+	glUniform1i(glGetUniformLocation(programId, "tex_specular"), 5);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.specular);
+
+	glUniform1i(glGetUniformLocation(programId, "tex_ws_position"), 6);
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_position);
+
+	glUniform1i(glGetUniformLocation(programId, "tex_ws_normal"), 7);
+	glActiveTexture(GL_TEXTURE7);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_normal);
+
+	glUniform1i(glGetUniformLocation(programId, "tex_ws_tangent"), 8);
+	glActiveTexture(GL_TEXTURE8);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_tangent);
+
+	glBindVertexArray(m_windowFrame.vao);
+
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	m_windowFrame.shader->disableShader();
 }
 
 int main() {
@@ -954,8 +1063,11 @@ void initializeGL() {
 	houses_init(60.0f, vec3(631.0f, 130.0f, 468.0f), 15.0f, vec3(656.0f, 135.0f, 483.0f));
 	window_init();
 	
-	glGenFramebuffers(1, &m_deferred.fbo);
+	glGenFramebuffers(1, &m_genTexture.fbo);
+	genTexture_setBuffer();
 	deferred_init();
+	
+
 	currentTexture = frameBufferTexture.diffuse;
 
 	m_cameraProjection = perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f);
@@ -965,7 +1077,6 @@ void resizeGL(GLFWwindow *window, int w, int h) {
 	FRAME_WIDTH = w;
 	FRAME_HEIGHT = h;
 	glViewport(0, 0, w, h);
-	//m_frameBuffer_test.setBuffer();
 	m_renderer->resize(w, h);
 	m_cameraProjection = perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
@@ -998,15 +1109,20 @@ void updateState() {
 
 void paintGL() {
 
-	deferred_render();
+	genTexture_bindFrameBuffer();
 	// render terrain
 	m_renderer->renderPass();
-	
 	// [TODO] implement your rendering function here
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	plane_render();
 	houses_render();
+	
+	deferred_bindFrameBuffer();
+	deferred_render();
 
+	// bloom_blindFrameBuffer();
+	// blooom draw
+	
+	
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	window_render(currentTexture);
 }
@@ -1131,6 +1247,14 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		case GLFW_KEY_5:
 			currentTexture = frameBufferTexture.ws_normal;
 			cout << "Texture is [ws_normal]" << endl;
+			break;
+		case GLFW_KEY_6:
+			currentTexture = frameBufferTexture.phongColor;
+			cout << "Texture is [phongColor]" << endl;
+			break;
+		case GLFW_KEY_7:
+			currentTexture = frameBufferTexture.bloomColor;
+			cout << "Texture is [bloomColor]" << endl;
 			break;
 		default:
 			break;

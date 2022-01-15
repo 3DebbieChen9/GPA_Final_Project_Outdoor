@@ -1,14 +1,16 @@
 #version 430 core
 
-layout(location = 0) in vec3 iv3position;
-layout(location = 1) in vec2 iv2tex_coord;
-layout(location = 2) in vec3 iv3normal;
-layout(location = 3) in vec3 iv3tangent;
+layout(location = 0) in vec2 position;
+layout(location = 1) in vec2 texcoord;
 
-uniform mat4 um4m;
-uniform mat4 um4v;
-uniform mat4 um4p;
 uniform vec3 uv3LightPos;
+
+uniform sampler2D tex_diffuse;
+uniform sampler2D tex_ambient;
+uniform sampler2D tex_specular;
+uniform sampler2D tex_ws_position;
+uniform sampler2D tex_ws_normal;
+uniform sampler2D tex_ws_tangent;
 
 out VS_OUT
 {
@@ -25,6 +27,7 @@ out VS_OUT
 
 void main()
 {
+	// no need to * um4v
 	// Calculate view-space coordinate
 	vec4 P = um4v * um4m * vec4(iv3position, 1.0);
 	// Eye space to tangent space TBN
