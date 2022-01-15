@@ -6,6 +6,8 @@ in vec3 v_uv ;
 
 out vec3 f_viewVertex ;
 out vec3 f_uv;
+out vec3 f_wsPosition;
+out vec4 f_wsNormal;
 
 uniform mat4 projMat ;
 uniform mat4 viewMat ;
@@ -28,12 +30,14 @@ void renderTerrain(){
 	vec4 worldV = modelMat * vec4(v_vertex, 1.0) ;
 	worldV.w = 1.0;
 	vec3 cVertex = getTerrainVertex(worldV) ;	
-	
+	f_wsPosition = cVertex;
+
 	// get normal
 	vec4 uvForNormal = vToHeightUVMat * worldV;
 	vec4 normalTex = texture(normalMap, vec2(uvForNormal.x, uvForNormal.z)) ;
 	// [0, 1] -> [-1, 1]
 	normalTex = normalTex * 2.0 - 1.0 ;
+	f_wsNormal = normalTex;
 		
 	vec4 viewVertex = viewMat * vec4(cVertex, 1) ;
 	vec4 viewNormal = viewMat * vec4(normalTex.rgb, 0) ;

@@ -2,12 +2,14 @@
 
 in vec3 f_viewVertex ;
 in vec3 f_uv ;
+in vec3 f_wsPosition;
+in vec4 f_wsNormal;
 
 layout (location = 0) out vec4 diffuse_color;
 layout (location = 1) out vec4 ambient_color;
 layout (location = 2) out vec4 specular_color;
 layout (location = 3) out vec4 ws_position;
-layout (location = 4) out vec4 normal;
+layout (location = 4) out vec4 ws_normal;
 
 uniform sampler2D texture0 ;
 
@@ -29,9 +31,15 @@ void renderTerrain(){
 	// get terrain color
 	vec4 terrainColor = texture(texture0, f_uv.rg) ;				
 	// apply fog
-	vec4 fColor = withFog(terrainColor) ;
+	// vec4 fColor = withFog(terrainColor) ;
+	
+	vec4 fColor = terrainColor;
 	fColor.a = 1.0 ;
 	diffuse_color = fColor ;
+	ambient_color = fColor;
+	specular_color = vec4(0.0f);
+	ws_position = vec4(f_wsPosition, 1.0f);
+	ws_normal = f_wsNormal;
 }
 
 void main(){	

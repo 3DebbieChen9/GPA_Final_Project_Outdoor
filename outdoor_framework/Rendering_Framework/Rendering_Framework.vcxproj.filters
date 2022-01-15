@@ -97,10 +97,10 @@
     <None Include="assets\geometry_vs.vs.glsl">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="assets\deferred_fs.fs.glsl">
+    <None Include="assets\GenTextures_fs.fs.glsl">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="assets\deferred_vs.vs.glsl">
+    <None Include="assets\GenTextures_vs.glsl">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
