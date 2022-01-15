@@ -222,8 +222,7 @@ void plane_loadModel() {
 			TextureData tex = loadImg(texturePath.C_Str());
 			glGenTextures(1, &Material.diffuse_tex);
 			glBindTexture(GL_TEXTURE_2D, Material.diffuse_tex);
-			//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, tex.width, tex.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.data);
 			glGenerateMipmap(GL_TEXTURE_2D);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -742,12 +741,12 @@ void window_render(GLuint texture) {
 	glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	m_windowFrame.shader->useShader();
 	glUniform1i(glGetUniformLocation(m_windowFrame.shader->getProgramID(), "tex"), 3);
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glBindVertexArray(m_windowFrame.vao);
 
-	m_windowFrame.shader->useShader();
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 	m_windowFrame.shader->disableShader();
 }
@@ -777,6 +776,10 @@ void deferred_init() {
 	glBindRenderbuffer(GL_RENDERBUFFER, m_deferred.depthRBO);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
 
+	// Frame Buffer
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_deferred.fbo);
+	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_deferred.depthRBO);
+
 	// FBO Data Texture
 	glGenTextures(1, &frameBufferTexture.dColor);
 	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.dColor);
@@ -784,18 +787,13 @@ void deferred_init() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameBufferTexture.dColor, 0);
-
-	// Frame Buffer
-	/*glGenFramebuffers(1, &m_deferred.fbo);*/
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_deferred.fbo);
-	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_deferred.depthRBO);
 	
 	// finally check if framebuffer is complete
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "Framebuffer not complete!" << std::endl;
 }
 void deferred_render() {
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.dColor);
+	//glBindTexture(GL_TEXTURE_2D, frameBufferTexture.dColor);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_deferred.fbo);
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
@@ -957,11 +955,11 @@ void paintGL() {
 
 	deferred_render();
 	// render terrain
-	//m_renderer->renderPass();
+	m_renderer->renderPass();
 	
 	// [TODO] implement your rendering function here
 	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	//plane_render();
+	plane_render();
 	houses_render();
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);

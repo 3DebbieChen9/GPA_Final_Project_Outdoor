@@ -1,12 +1,10 @@
 #version 430 core
 
-layout(location = 0) out vec3 dPosition;
-layout(location = 1) out vec3 dNormal;
-layout(location = 2) out vec3 dAmbient;
-layout(location = 3) out vec3 ddiffuse;
-layout(location = 4) out vec3 dSpecular;
-layout(location = 5) out vec3 dColor;
-layout(location = 6) out vec3 dBloom;
+layout(location = 0) out vec4 diffuse_color;
+layout(location = 1) out vec4 ambient_color;
+layout(location = 2) out vec4 specular_color;
+layout(location = 3) out vec4 ws_position;
+layout(location = 4) out vec4 normal;
 
 in VS_OUT{
 	vec3 N; // model space normal
@@ -25,11 +23,6 @@ uniform sampler2D diffuseTexture;
 
 uniform vec3 light_pos;
 uniform vec3 view_pos;
-
-//uniform float far_plane;
-//uniform bool shadow_flag;
-//// 0: light, 1: diffuse, 2: depth only 3: 
-//uniform int point_flag;
 
 vec3 gen_diffuse_color() {
 	/*vec3 objectColor;

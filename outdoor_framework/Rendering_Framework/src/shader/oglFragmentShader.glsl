@@ -3,7 +3,11 @@
 in vec3 f_viewVertex ;
 in vec3 f_uv ;
 
-layout (location = 0) out vec4 fragColor0 ;
+layout (location = 0) out vec4 diffuse_color;
+layout (location = 1) out vec4 ambient_color;
+layout (location = 2) out vec4 specular_color;
+layout (location = 3) out vec4 ws_position;
+layout (location = 4) out vec4 normal;
 
 uniform sampler2D texture0 ;
 
@@ -27,7 +31,7 @@ void renderTerrain(){
 	// apply fog
 	vec4 fColor = withFog(terrainColor) ;
 	fColor.a = 1.0 ;
-	fragColor0 = fColor ;
+	diffuse_color = fColor ;
 }
 
 void main(){	

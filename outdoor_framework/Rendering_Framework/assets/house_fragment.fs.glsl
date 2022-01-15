@@ -82,6 +82,6 @@ void main()
 	else {
 		fragColor = vec4(texColor, 1.0);
 	}*/
-	//fragColor = vec4(texColor, 1.0);
-	normalMapping();
+	fragColor = vec4(texColor, 1.0);
+	//normalMapping();
 }
