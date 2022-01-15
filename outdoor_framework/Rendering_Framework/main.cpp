@@ -916,6 +916,7 @@ void deferred_bindFrameBuffer() {
 void deferred_init() {
 	glGenFramebuffers(1, &m_deferred.fbo);
 	deferred_setBuffer();
+	cout << "m_deferred Init" << endl;
 	m_deferred.shader = new Shader("assets\\Deferred_vs.vs.glsl", "assets\\Deferred_fs.fs.glsl");
 }
 void deferred_render() {
@@ -1001,6 +1002,7 @@ void bloom_bindFrameBuffrer() {
 void bloom_init() {
 	glGenFramebuffers(1, &m_bloom.fbo);
 	bloom_setBuffer();
+	cout << "m_bloom Init" << endl;
 	m_bloom.shader = new Shader("assets\\Bloom_vs.vs.glsl", "assets\\Bloom_fs.fs.glsl");
 }
 void bloom_render() {
