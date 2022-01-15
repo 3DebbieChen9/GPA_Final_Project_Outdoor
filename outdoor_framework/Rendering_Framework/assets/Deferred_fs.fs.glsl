@@ -33,16 +33,19 @@ vec3 phongShading() {
 	vec3 vs_V = uv3eyePos - vs_P.xyz;
 	vec3 eyeDir = normalize(vec3(dot(vs_V, vs_T), dot(vs_V, vs_B), dot(vs_V, vs_N))); /// out
 	
-	vec3 fs_V = normalize(eyeDir);
-	vec3 fs_L = normalize(lightDir);
-	vec3 fs_N = normalize(vs_N);
+	// vec3 fs_V = normalize(eyeDir);
+	// vec3 fs_L = normalize(lightDir);
+	// vec3 fs_N = normalize(vs_N);
+	vec3 fs_V = eyeDir;
+	vec3 fs_L = lightDir;
+	vec3 fs_N = vs_N;
 
 	vec3 fs_R = reflect(-fs_L, fs_N);
 
-	vec3 diffuse_albedo = vec3(3.0) * texture(tex_diffuse, fs_in.texcoord).rgb;
+	vec3 diffuse_albedo = vec3(10.0) * texture(tex_diffuse, fs_in.texcoord).rgb;
 	vec3 diffuse = max(dot(fs_N, fs_L), 0.0) * diffuse_albedo;
 
-	vec3 specular_albedo = vec3(1.0); //texture(tex_specular, fs_in.texcoord).rgb;
+	vec3 specular_albedo = texture(tex_specular, fs_in.texcoord).rgb;
 	vec3 specular = max(pow(dot(fs_R, fs_V), 900.0), 0.0) * specular_albedo;
 
 	vec3 ambient = texture(tex_ambient, fs_in.texcoord).rgb;

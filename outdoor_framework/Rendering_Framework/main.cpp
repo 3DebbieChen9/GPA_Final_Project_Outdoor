@@ -61,12 +61,7 @@ vec2 m_oldDistance = vec2(0, 0);
 vec2 m_rotateAngle = vec2(0.0f, 0.0f);
 #pragma endregion
 
-#pragma region Light Source
-mat4 lightView(1.0f);
-mat4 lightProjection(1.0f);
 vec3 lightPosition = vec3(0.2f, 0.6f, 0.5f);
-#pragma endregion
-
 void vsyncEnabled(GLFWwindow *window);
 void vsyncDisabled(GLFWwindow *window);
 

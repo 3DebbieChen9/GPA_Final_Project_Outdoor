@@ -61,21 +61,25 @@ void main()
 			fragColor = vec4(texture(tex_specular, fs_in.texcoord).rgb, 1.0f);
 			break;
 		case TEXTURE_WS_POSITION:
-			tmpX = clamp(texelFetch(tex_ws_position, ivec2(gl_FragCoord.xy), 0).x, 0, 255);
-			tmpY = clamp(texelFetch(tex_ws_position, ivec2(gl_FragCoord.xy), 0).y, 0, 255);
-			tmpZ = clamp(texelFetch(tex_ws_position, ivec2(gl_FragCoord.xy), 0).z, 0, 255);
-			fragColor = vec4(tmpX, tmpY, tmpZ, 1.0f);
+			vec3 ws_position = texelFetch(tex_ws_position, ivec2(gl_FragCoord.xy), 0).rgb;
+			fragColor = vec4(clamp(ws_position, vec3(0.0f), vec3(1.0f)), 1.0f);
+			// tmpX = clamp(ws_position.x, 0.0f, 1.0f);
+			// tmpY = clamp(ws_position.y, 0.0f, 1.0f);
+			// tmpZ = clamp(ws_position.z, 0.0f, 1.0f);
+			// fragColor = vec4(tmpX, tmpY, tmpZ, 1.0f);
 			break;
 		case TEXTURE_WS_NORMAL:
-			tmpX = clamp(texelFetch(tex_ws_normal, ivec2(gl_FragCoord.xy), 0).x, 0, 255);
-			tmpY = clamp(texelFetch(tex_ws_normal, ivec2(gl_FragCoord.xy), 0).y, 0, 255);
-			tmpZ = clamp(texelFetch(tex_ws_normal, ivec2(gl_FragCoord.xy), 0).z, 0, 255);
+			vec3 ws_normal = texelFetch(tex_ws_normal, ivec2(gl_FragCoord.xy), 0).rgb;
+			tmpX = clamp(ws_normal.x, 0.0f, 1.0f);
+			tmpY = clamp(ws_normal.y, 0.0f, 1.0f);
+			tmpZ = clamp(ws_normal.z, 0.0f, 1.0f);
 			fragColor = vec4(tmpX, tmpY, tmpZ, 1.0f);
 			break;
 		case TEXTURE_WS_TANGENT:
-			tmpX = clamp(texelFetch(tex_ws_tangent, ivec2(gl_FragCoord.xy), 0).x, 0, 255);
-			tmpY = clamp(texelFetch(tex_ws_tangent, ivec2(gl_FragCoord.xy), 0).y, 0, 255);
-			tmpZ = clamp(texelFetch(tex_ws_tangent, ivec2(gl_FragCoord.xy), 0).z, 0, 255);
+			vec3 ws_tangent = texelFetch(tex_ws_tangent, ivec2(gl_FragCoord.xy), 0).rgb;
+			tmpX = clamp(ws_tangent.x, 0.0f, 1.0f);
+			tmpY = clamp(ws_tangent.y, 0.0f, 1.0f);
+			tmpZ = clamp(ws_tangent.z, 0.0f, 1.0f);
 			fragColor = vec4(tmpX, tmpY, tmpZ, 1.0f);
 			break;
 		case TEXTURE_PHONG:
