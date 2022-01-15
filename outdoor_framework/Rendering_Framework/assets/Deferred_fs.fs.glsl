@@ -10,12 +10,12 @@ in VS_OUT
 
 uniform vec3 uv3LightPos;
 uniform vec3 uv3eyePos;
-uniform sampler2D tex_ws_position;
-uniform sampler2D tex_ws_normal;
-uniform sampler2D tex_ws_tangent;
 uniform sampler2D tex_diffuse;
 uniform sampler2D tex_ambient;
 uniform sampler2D tex_specular;
+uniform sampler2D tex_ws_position;
+uniform sampler2D tex_ws_normal;
+uniform sampler2D tex_ws_tangent;
 
 vec3 color = vec3(1.0f);
 void phongShading() {
@@ -23,7 +23,7 @@ void phongShading() {
 	vec4 vs_P = vec4(texelFetch(tex_ws_position, ivec2(gl_FragCoord.xy), 0).xyz, 1.0);
 	// Eye space to tangent space TBN
 	vec3 vs_T = normalize(texelFetch(tex_ws_tangent, ivec2(gl_FragCoord.xy), 0).xyz);
-	vec3 vs_N = normalize(texelFetch(tex_ws_normal, ivec2(gl_FragCoord.xy), 0).xyz * 2.0 - vec3(1.0f)); // out
+	vec3 vs_N = normalize(texelFetch(tex_ws_normal, ivec2(gl_FragCoord.xy), 0).xyz * 2.0 - vec3(1.0)); // out
 	vec3 vs_B = cross(vs_N, vs_T);
 
 	// Parallel Light

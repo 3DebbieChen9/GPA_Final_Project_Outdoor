@@ -367,8 +367,8 @@ void plane_init(mat4 _rotateMatrix, vec3 _position) {
 
 	m_airplane.shader = new Shader("assets\\GenTextures_vs.vs.glsl", "assets\\GenTextures_fs.fs.glsl");
 	m_airplane.shader->useShader();
-
 	const GLuint programId = m_airplane.shader->getProgramID();
+	cout << "Airplane programID: " << programId << endl;
 	glUniform1i(glGetUniformLocation(programId, "diffuseTexture"), 3);
 	glUniform1i(glGetUniformLocation(programId, "normalTexture"), 4);
 
@@ -624,8 +624,8 @@ void houses_init(float a_rotateAngle, vec3 a_position, float b_rotateAngle,  vec
 	// House A
 	m_houses.shaderA = new Shader("assets\\GenTextures_vs.vs.glsl", "assets\\GenTextures_fs.fs.glsl");
 	m_houses.shaderA->useShader();
-
 	const GLuint programId_A = m_houses.shaderA->getProgramID();
+	cout << "House A programID: " << programId_A << endl;
 	m_houses.texUnit.diffuse = GL_TEXTURE3;
 	glUniform1i(glGetUniformLocation(programId_A, "diffuseTexture"), 3);
 	m_houses.texUnit.normal = GL_TEXTURE4;
@@ -635,8 +635,8 @@ void houses_init(float a_rotateAngle, vec3 a_position, float b_rotateAngle,  vec
 	// House B
 	m_houses.shaderB = new Shader("assets\\GenTextures_vs.vs.glsl", "assets\\GenTextures_fs.fs.glsl");
 	m_houses.shaderB->useShader();
-
 	const GLuint programId_B = m_houses.shaderB->getProgramID();
+	cout << "House B programID: " << programId_B << endl;
 	m_houses.texUnit.diffuse = GL_TEXTURE3;
 	glUniform1i(glGetUniformLocation(programId_B, "diffuseTexture"), 3);
 	m_houses.texUnit.normal = GL_TEXTURE4;
@@ -724,6 +724,22 @@ void houses_render() {
 
 }
 #pragma endregion
+struct {
+	GLuint diffuse;
+	GLuint ambient;
+	GLuint specular;
+	GLuint ws_position;
+	GLuint ws_normal;
+	GLuint ws_tangent;
+
+	GLuint phongColor;
+	GLuint bloomHDR;
+
+	GLuint bloomColor;
+	GLuint displayColor;
+} frameBufferTexture;
+
+int DISPLAY;
 
 #pragma region WindowFrame
 struct {
@@ -741,6 +757,7 @@ void window_init() {
 	m_windowFrame.shader = new Shader("assets\\windowFrame_vertex.vs.glsl", "assets\\windowFrame_fragment.fs.glsl");
 	//m_windowFrame.shader->useShader();
 	//const GLuint programId = m_windowFrame.shader->getProgramID();
+	cout << "Window programID: " << m_windowFrame.shader->getProgramID() << endl;
 	glGenVertexArrays(1, &m_windowFrame.vao);
 	glBindVertexArray(m_windowFrame.vao);
 
@@ -757,13 +774,14 @@ void window_init() {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	//m_windowFrame.shader->disableShader();
 }
+
 void window_render(GLuint texture) {
 	glClearColor(0.5f, 0.5f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	m_windowFrame.shader->useShader();
-	glUniform1i(glGetUniformLocation(m_windowFrame.shader->getProgramID(), "tex"), 3);
-	glActiveTexture(GL_TEXTURE3);
+	glUniform1i(glGetUniformLocation(m_windowFrame.shader->getProgramID(), "tex"), 20);
+	glActiveTexture(GL_TEXTURE20);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glBindVertexArray(m_windowFrame.vao);
 
@@ -772,19 +790,6 @@ void window_render(GLuint texture) {
 }
 #pragma endregion
 
-struct {
-	GLuint diffuse;
-	GLuint ambient;
-	GLuint specular;
-	GLuint ws_position;
-	GLuint ws_normal;
-	GLuint ws_tangent;
-
-	GLuint phongColor;
-	GLuint bloomHDR;
-
-	GLuint bloomColor;
-} frameBufferTexture;
 
 struct {
 	GLuint fbo;
@@ -926,8 +931,36 @@ void deferred_bindFrameBuffer() {
 void deferred_init() {
 	glGenFramebuffers(1, &m_deferred.fbo);
 	deferred_setBuffer();
-	cout << "m_deferred Init" << endl;
 	m_deferred.shader = new Shader("assets\\Deferred_vs.vs.glsl", "assets\\Deferred_fs.fs.glsl");
+	m_deferred.shader->useShader();
+	const GLuint programId = m_deferred.shader->getProgramID();
+	cout << "m_deferred programID: " << programId << endl;
+	glUniform3fv(glGetUniformLocation(programId, "uv3LightPos"), 1, value_ptr(lightPosition));
+	glUniform3fv(glGetUniformLocation(programId, "uv3eyePos"), 1, value_ptr(m_eye));
+
+	glUniform1i(glGetUniformLocation(programId, "tex_diffuse"), 10);
+	glActiveTexture(GL_TEXTURE10);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
+
+	glUniform1i(glGetUniformLocation(programId, "tex_ambient"), 11);
+	glActiveTexture(GL_TEXTURE11);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
+
+	glUniform1i(glGetUniformLocation(programId, "tex_specular"), 12);
+	glActiveTexture(GL_TEXTURE12);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
+
+	glUniform1i(glGetUniformLocation(programId, "tex_ws_position"), 13);
+	glActiveTexture(GL_TEXTURE13);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
+
+	glUniform1i(glGetUniformLocation(programId, "tex_ws_normal"), 14);
+	glActiveTexture(GL_TEXTURE14);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
+
+	glUniform1i(glGetUniformLocation(programId, "tex_ws_tangent"), 15);
+	glActiveTexture(GL_TEXTURE15);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
 }
 void deferred_render() {
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -938,29 +971,29 @@ void deferred_render() {
 	glUniform3fv(glGetUniformLocation(programId, "uv3LightPos"), 1, value_ptr(lightPosition));
 	glUniform3fv(glGetUniformLocation(programId, "uv3eyePos"), 1, value_ptr(m_eye));
 
-	glUniform1i(glGetUniformLocation(programId, "tex_diffuse"), 3);
-	glActiveTexture(GL_TEXTURE3);
+	glUniform1i(glGetUniformLocation(programId, "tex_diffuse"), 10);
+	glActiveTexture(GL_TEXTURE10);
 	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
 
-	glUniform1i(glGetUniformLocation(programId, "tex_ambient"), 4);
-	glActiveTexture(GL_TEXTURE4);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ambient);
+	glUniform1i(glGetUniformLocation(programId, "tex_ambient"), 11);
+	glActiveTexture(GL_TEXTURE11);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
 
-	glUniform1i(glGetUniformLocation(programId, "tex_specular"), 5);
-	glActiveTexture(GL_TEXTURE5);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.specular);
+	glUniform1i(glGetUniformLocation(programId, "tex_specular"), 12);
+	glActiveTexture(GL_TEXTURE12);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
 
-	glUniform1i(glGetUniformLocation(programId, "tex_ws_position"), 6);
-	glActiveTexture(GL_TEXTURE6);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_position);
+	glUniform1i(glGetUniformLocation(programId, "tex_ws_position"), 13);
+	glActiveTexture(GL_TEXTURE13);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
 
-	glUniform1i(glGetUniformLocation(programId, "tex_ws_normal"), 7);
-	glActiveTexture(GL_TEXTURE7);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_normal);
+	glUniform1i(glGetUniformLocation(programId, "tex_ws_normal"), 14);
+	glActiveTexture(GL_TEXTURE14);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
 
-	glUniform1i(glGetUniformLocation(programId, "tex_ws_tangent"), 8);
-	glActiveTexture(GL_TEXTURE8);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_tangent);
+	glUniform1i(glGetUniformLocation(programId, "tex_ws_tangent"), 15);
+	glActiveTexture(GL_TEXTURE15);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
 
 	glBindVertexArray(m_windowFrame.vao);
 
@@ -1012,15 +1045,18 @@ void bloom_bindFrameBuffrer() {
 void bloom_init() {
 	glGenFramebuffers(1, &m_bloom.fbo);
 	bloom_setBuffer();
-	cout << "m_bloom Init" << endl;
 	m_bloom.shader = new Shader("assets\\Bloom_vs.vs.glsl", "assets\\Bloom_fs.fs.glsl");
+	cout << "m_bloom programID: " << m_bloom.shader->getProgramID() << endl;
 }
 void bloom_render() {
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+	
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	m_bloom.shader->useShader();
 	const GLuint programId = m_bloom.shader->getProgramID();
+
+	glUniform1i(glGetUniformLocation(programId, "DISPLAY"), DISPLAY);
 
 	glUniform1i(glGetUniformLocation(programId, "tex_bloomHDR"), 3);
 	glActiveTexture(GL_TEXTURE3);
@@ -1028,6 +1064,24 @@ void bloom_render() {
 	glUniform1i(glGetUniformLocation(programId, "tex_phongColor"), 4);
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.phongColor);
+	glUniform1i(glGetUniformLocation(programId, "tex_diffuse"), 5);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.diffuse);
+	glUniform1i(glGetUniformLocation(programId, "tex_ambient"), 6);
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ambient);
+	glUniform1i(glGetUniformLocation(programId, "tex_specular"), 7);
+	glActiveTexture(GL_TEXTURE7);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.specular);
+	glUniform1i(glGetUniformLocation(programId, "tex_ws_position"), 8);
+	glActiveTexture(GL_TEXTURE8);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_position);
+	glUniform1i(glGetUniformLocation(programId, "tex_ws_normal"), 9);
+	glActiveTexture(GL_TEXTURE9);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_normal);
+	glUniform1i(glGetUniformLocation(programId, "tex_ws_tangent"), 10);
+	glActiveTexture(GL_TEXTURE10);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_tangent);
 
 	glBindVertexArray(m_windowFrame.vao);
 
@@ -1204,7 +1258,7 @@ void paintGL() {
 	bloom_render();
 	
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-	window_render(currentTexture);
+	// window_render(currentTexture);
 }
 
 ////////////////////////////////////////////////
@@ -1300,31 +1354,38 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 			cout << "Input center(split with space): " << endl;
 			break;
 		case GLFW_KEY_1:
-			currentTexture = frameBufferTexture.diffuse;
+			// currentTexture = frameBufferTexture.diffuse;
+			DISPLAY = 1;
 			cout << "Texture is [Diffuse]" << endl;
 			break;
 		case GLFW_KEY_2:
-			currentTexture = frameBufferTexture.ambient;
+			// currentTexture = frameBufferTexture.ambient;
+			DISPLAY = 2;
 			cout << "Texture is [Ambient]" << endl;
 			break;
 		case GLFW_KEY_3:
-			currentTexture = frameBufferTexture.specular;
+			// currentTexture = frameBufferTexture.specular;
+			DISPLAY = 3;
 			cout << "Texture is [Specular]" << endl;
 			break;
 		case GLFW_KEY_4:
-			currentTexture = frameBufferTexture.ws_position;
+			// currentTexture = frameBufferTexture.ws_position;
+			DISPLAY = 4;
 			cout << "Texture is [ws_position]" << endl;
 			break;
 		case GLFW_KEY_5:
-			currentTexture = frameBufferTexture.ws_normal;
+			// currentTexture = frameBufferTexture.ws_normal;
+			DISPLAY = 5;
 			cout << "Texture is [ws_normal]" << endl;
 			break;
 		case GLFW_KEY_6:
-			currentTexture = frameBufferTexture.phongColor;
+			// currentTexture = frameBufferTexture.phongColor;
+			DISPLAY = 6;
 			cout << "Texture is [phongColor]" << endl;
 			break;
 		case GLFW_KEY_7:
-			currentTexture = frameBufferTexture.bloomColor;
+			// currentTexture = frameBufferTexture.bloomColor;
+			DISPLAY = 7;
 			cout << "Texture is [bloomColor]" << endl;
 			break;
 		default:

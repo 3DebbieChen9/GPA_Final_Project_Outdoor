@@ -7,11 +7,18 @@ in VS_OUT
 	vec2 texcoord;
 } fs_in;
 
-uniform sampler2D tex_phongColor;
+uniform int DISPLAY;
 uniform sampler2D tex_bloomHDR;
+uniform sampler2D tex_phongColor;
 
-void main()
-{
+uniform sampler2D tex_diffuse;
+uniform sampler2D tex_ambient;
+uniform sampler2D tex_specular;
+uniform sampler2D tex_ws_position;
+uniform sampler2D tex_ws_normal;
+uniform sampler2D tex_ws_tangent;
+
+void genBloom() {
 	int half_size = 2;
 	vec4 color_sum = vec4(0);
 
@@ -25,4 +32,34 @@ void main()
 	vec4 color = color_sum / sample_count;
 	vec3 originalColor = texture(tex_phongColor, fs_in.texcoord).rgb;
 	fragColor = vec4((originalColor * vec3(0.2) + color.xyz * vec3(0.8)), 1.0f);
+}
+
+void main()
+{
+	switch(DISPLAY) {
+		case 1:
+			fragColor = vec4(texture(tex_diffuse, fs_in.texcoord).rgb, 1.0f);
+			break;
+		case 2: 
+			fragColor = vec4(texture(tex_ambient, fs_in.texcoord).rgb, 1.0f);
+			break;
+		case 3: 
+			fragColor = vec4(texture(tex_specular, fs_in.texcoord).rgb, 1.0f);
+			break;
+		case 4: 
+			fragColor = vec4(texture(tex_ws_position, fs_in.texcoord).rgb, 1.0f);
+			break;
+		case 5: 
+			fragColor = vec4(texture(tex_ws_normal, fs_in.texcoord).rgb, 1.0f);
+			break;
+		case 6: 
+			fragColor = vec4(texture(tex_phongColor, fs_in.texcoord).rgb, 1.0f);
+			break;
+		case 7: 
+			genBloom();
+			break;	
+		default:
+			fragColor = vec4(texture(tex_phongColor, fs_in.texcoord).rgb, 1.0f);
+			break;
+	}
 }
