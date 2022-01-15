@@ -63,24 +63,14 @@ void main()
 		case TEXTURE_WS_POSITION:
 			vec3 ws_position = texelFetch(tex_ws_position, ivec2(gl_FragCoord.xy), 0).rgb;
 			fragColor = vec4(clamp(ws_position, vec3(0.0f), vec3(1.0f)), 1.0f);
-			// tmpX = clamp(ws_position.x, 0.0f, 1.0f);
-			// tmpY = clamp(ws_position.y, 0.0f, 1.0f);
-			// tmpZ = clamp(ws_position.z, 0.0f, 1.0f);
-			// fragColor = vec4(tmpX, tmpY, tmpZ, 1.0f);
 			break;
 		case TEXTURE_WS_NORMAL:
 			vec3 ws_normal = texelFetch(tex_ws_normal, ivec2(gl_FragCoord.xy), 0).rgb;
-			tmpX = clamp(ws_normal.x, 0.0f, 1.0f);
-			tmpY = clamp(ws_normal.y, 0.0f, 1.0f);
-			tmpZ = clamp(ws_normal.z, 0.0f, 1.0f);
-			fragColor = vec4(tmpX, tmpY, tmpZ, 1.0f);
+			fragColor = vec4(clamp(ws_normal, vec3(0.0f), vec3(1.0f)), 1.0f);
 			break;
 		case TEXTURE_WS_TANGENT:
 			vec3 ws_tangent = texelFetch(tex_ws_tangent, ivec2(gl_FragCoord.xy), 0).rgb;
-			tmpX = clamp(ws_tangent.x, 0.0f, 1.0f);
-			tmpY = clamp(ws_tangent.y, 0.0f, 1.0f);
-			tmpZ = clamp(ws_tangent.z, 0.0f, 1.0f);
-			fragColor = vec4(tmpX, tmpY, tmpZ, 1.0f);
+			fragColor = vec4(clamp(ws_tangent, vec3(0.0f), vec3(1.0f)), 1.0f);
 			break;
 		case TEXTURE_PHONG:
 			fragColor = vec4(texture(tex_phong, fs_in.texcoord).rgb, 1.0f);
