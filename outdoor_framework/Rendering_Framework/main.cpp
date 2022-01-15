@@ -800,13 +800,13 @@ void genTexture_setBuffer() {
 	glDeleteTextures(1, &frameBufferTexture.ws_tangent);
 
 	// Render Buffer
-	// glGenRenderbuffers(1, &m_genTexture.depthRBO);
-	// glBindRenderbuffer(GL_RENDERBUFFER, m_genTexture.depthRBO);
-	// glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
+	glGenRenderbuffers(1, &m_genTexture.depthRBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, m_genTexture.depthRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
 
 	// Frame Buffer
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_genTexture.fbo);
-	// glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_genTexture.depthRBO);
+	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_genTexture.depthRBO);
 
 	//// Texture | 0: diffuse 1: ambient 2: specular 3: ws_position 4: ws_normal 5: ws_tangent
 	// diffuse
@@ -882,13 +882,13 @@ void deferred_setBuffer() {
 	glDeleteTextures(1, &frameBufferTexture.bloomHDR);
 
 	// Render Buffer
-	// glGenRenderbuffers(1, &m_deferred.depthRBO);
-	// glBindRenderbuffer(GL_RENDERBUFFER, m_deferred.depthRBO);
-	// glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
+	glGenRenderbuffers(1, &m_deferred.depthRBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, m_deferred.depthRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
 
 	// Frame Buffer
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_deferred.fbo);
-	//glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_deferred.depthRBO);
+	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_deferred.depthRBO);
 
 	//// Texture | 0: phongColor 1: bloomHDR
 	// phongColor
@@ -977,13 +977,13 @@ void bloom_setBuffer() {
 	glDeleteRenderbuffers(1, &m_bloom.depthRBO);
 	glDeleteTextures(1, &frameBufferTexture.bloomColor);
 	// Render Buffer
-	// glGenRenderbuffers(1, &m_bloom.depthRBO);
-	// glBindRenderbuffer(GL_RENDERBUFFER, m_bloom.depthRBO);
-	// glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
+	glGenRenderbuffers(1, &m_bloom.depthRBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, m_bloom.depthRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, FRAME_WIDTH, FRAME_HEIGHT);
 
 	// Frame Buffer
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_bloom.fbo);
-	// glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_bloom.depthRBO);
+	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_bloom.depthRBO);
 
 	//// Texture | 0: bloomColor
 	// bloomColor
