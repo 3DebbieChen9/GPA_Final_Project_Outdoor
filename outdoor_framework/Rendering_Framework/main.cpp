@@ -18,7 +18,9 @@
 #define TEXTURE_WS_NORMAL 10
 #define TEXTURE_WS_TANGENT 11
 #define TEXTURE_PHONG 12
-#define TEXTURE_BLOOMHDR 13
+#define TEXTURE_PHONGSHADOW 13
+#define TEXTURE_BLOOMHDR 14
+
 
 using namespace glm;
 using namespace std;
@@ -805,6 +807,9 @@ struct {
 
 	GLuint phongColor;
 	GLuint bloomHDR;
+	GLuint phongShadow;
+
+	GLuint dirDepth;
 
 	GLuint finalTex;
 } frameBufferTexture;
@@ -860,6 +865,8 @@ void m_window_init() {
 	glActiveTexture(GL_TEXTURE12);
 	glUniform1i(glGetUniformLocation(programID, "tex_bloomHDR"), 13);
 	glActiveTexture(GL_TEXTURE13);
+	glUniform1i(glGetUniformLocation(programID, "tex_phongShadow"), 14);
+	glActiveTexture(GL_TEXTURE14);
 	m_windowFrame.shader->disableShader();
 }
 void m_window_render() {
@@ -902,6 +909,10 @@ void m_window_render() {
 	glUniform1i(glGetUniformLocation(programID, "tex_bloomHDR"), 13);
 	glActiveTexture(GL_TEXTURE13);
 	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.bloomHDR);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_phongShadow"), 14);
+	glActiveTexture(GL_TEXTURE14);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.phongShadow);
 
 	glBindVertexArray(m_windowFrame.vao);
 
@@ -999,6 +1010,107 @@ void genTexture_init() {
 
 struct {
 	Shader *shader;
+	GLuint depthFBO;
+	int shadowSize = 1024;
+	float near = 0.0f, far = 10.0f;
+	vec3 LightPos = vec3(636.48, 134.79, 495.98);
+	vec3 LightDir = vec3(0.2, 0.6, 0.5);
+	mat4 LightVP = mat4(1.0f);
+
+	// vec3 dir_light_pos = vec3(-1.14f, 3.0f, 0.77f);
+	// vec3 dir_light = vec3(-2.51449f, 0.477241f, -1.21263f);
+	// // vec3 dir_light = vec3(-2.51449f, -0.477241f, -1.21263f);
+	// float dir_shadow_near=0.0f, dir_shadow_far=10.0f;
+	// mat4 dir_light_vp;
+} m_dirShadow;
+
+void dirShadow_init() {
+	// Shader Init
+	m_dirShadow.shader = new Shader("assets\\DirectionalShadow_vs.vs.glsl", "assets\\DirectionalShadow_fs.fs.glsl");
+	
+	// dir_shader.initShader("dir_light.vs.glsl", "dir_light.fs.glsl");
+
+	// depth FBO
+	glGenFramebuffers(1, &m_dirShadow.depthFBO);
+
+	// depth texture
+	glGenTextures(1, &frameBufferTexture.dirDepth);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.dirDepth);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, 
+		m_dirShadow.shadowSize, m_dirShadow.shadowSize, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	GLfloat borderColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+	// attach depth texture
+	glBindFramebuffer(GL_FRAMEBUFFER, m_dirShadow.depthFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, frameBufferTexture.dirDepth, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+
+	 if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+		 cout << "direct light framebuffer error" << endl;
+	 }
+
+	// back to default framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+void dirShadow_render() {
+	// global state
+	glEnable(GL_DEPTH_TEST);
+
+	// render depth map
+	glBindFramebuffer(GL_FRAMEBUFFER, m_dirShadow.depthFBO);
+	m_dirShadow.shader->useShader();
+	const GLuint programID = m_dirShadow.shader->getProgramID();
+
+	glViewport(0, 0, m_dirShadow.shadowSize, m_dirShadow.shadowSize);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	mat4 light_p, light_v;
+	float range = 5.0f;
+	
+	light_p = ortho(-range, range, -range, range, m_dirShadow.near, m_dirShadow.far);
+	light_v = lookAt(m_dirShadow.LightPos, m_dirShadow.LightPos - m_dirShadow.LightDir, vec3(0.0f, 1.0f, 0.0));
+	m_dirShadow.LightVP = light_p * light_v;
+
+	glUniformMatrix4fv(glGetUniformLocation(programID, "light_vp"), 1, GL_FALSE, value_ptr(m_dirShadow.LightVP));
+	m_dirShadow.shader->disableShader();
+
+	// glViewport(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+	// render_models(dir_shadow_shader, false);
+
+	// render normally
+	// glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	// dir_shader.use();
+	// glViewport(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+	// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
+	// light setting
+	// glUniform3fv(dir_shader.get("view_pos"), 1, &camera.Position[0]);
+	// glUniform3fv(dir_shader.get("light_pos"), 1, &dir_light[0]);
+	// glUniformMatrix4fv(dir_shader.get("light_vp"), 1, GL_FALSE, value_ptr(dir_light_vp));
+	// dir_shader.setFloat("near_plane", dir_shadow_near);
+	// dir_shader.setFloat("far_plane", dir_shadow_far);
+
+
+	// dir_shader.setInt("shadow_flag", shadow_flag); // enable or disable shadow
+	// dir_shader.setInt("dir_flag", dir_flag); // event flag
+
+	// // set shadow to texture unit 2
+	// glActiveTexture(GL_TEXTURE2);
+	// glBindTexture(GL_TEXTURE_2D, dir_depth_map);
+
+	// render_models(dir_shader, true);
+}
+
+
+struct {
+	Shader *shader;
 	GLuint fbo;
 	GLuint depthRBO;
 } m_deferred;
@@ -1017,7 +1129,7 @@ void deferred_setBuffer() {
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_deferred.fbo);
 	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_deferred.depthRBO);
 
-	//// Texture | 0: phongColor 1: bloomHDR
+	//// Texture | 0: phongColor 1: bloomHDR 2: phongShadow
 	// phongColor
 	glGenTextures(1, &frameBufferTexture.phongColor);
 	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.phongColor);
@@ -1034,12 +1146,20 @@ void deferred_setBuffer() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, frameBufferTexture.bloomHDR, 0);
 
+	// bloomHDR
+	glGenTextures(1, &frameBufferTexture.phongShadow);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.phongShadow);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, frameBufferTexture.phongShadow, 0);
+
 	// finally check if framebuffer is complete
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "Framebuffer not complete!" << std::endl;
 }
 void deferred_bindFrameBuffer() {
-	const GLenum colorBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+	const GLenum colorBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_deferred.fbo);
 	glDrawBuffers(2, colorBuffers);
 
@@ -1060,6 +1180,7 @@ void deferred_init() {
 	cout << "m_deferred programID: " << programID << endl;
 	glUniform3fv(glGetUniformLocation(programID, "uv3LightPos"), 1, value_ptr(lightPosition));
 	glUniform3fv(glGetUniformLocation(programID, "uv3eyePos"), 1, value_ptr(m_eye));
+	glUniformMatrix4fv(glGetUniformLocation(programID, "um4LightVP"), 1, GL_FALSE, value_ptr(m_dirShadow.LightVP));
 	
 	glUniform1i(glGetUniformLocation(programID, "tex_diffuse"), 6);
 	glActiveTexture(GL_TEXTURE6);
@@ -1073,6 +1194,8 @@ void deferred_init() {
 	glActiveTexture(GL_TEXTURE10);
 	glUniform1i(glGetUniformLocation(programID, "tex_ws_tangent"), 11);
 	glActiveTexture(GL_TEXTURE11);
+	glUniform1i(glGetUniformLocation(programID, "tex_dirDepth"), 14);
+	glActiveTexture(GL_TEXTURE14);
 
 	m_deferred.shader->disableShader();
 }
@@ -1085,6 +1208,7 @@ void deferred_render() {
 	const GLuint programID = m_deferred.shader->getProgramID();
 	glUniform3fv(glGetUniformLocation(programID, "uv3LightPos"), 1, value_ptr(lightPosition));
 	glUniform3fv(glGetUniformLocation(programID, "uv3eyePos"), 1, value_ptr(m_eye));
+	glUniformMatrix4fv(glGetUniformLocation(programID, "um4LightVP"), 1, GL_FALSE, value_ptr(m_dirShadow.LightVP));
 
 	glUniform1i(glGetUniformLocation(programID, "tex_diffuse"), 6);
 	glActiveTexture(GL_TEXTURE6);
@@ -1110,11 +1234,16 @@ void deferred_render() {
 	glActiveTexture(GL_TEXTURE11);
 	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.ws_tangent);
 
+	glUniform1i(glGetUniformLocation(programID, "tex_dirDepth"), 14);
+	glActiveTexture(GL_TEXTURE14);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.dirDepth);
+
 	glBindVertexArray(m_windowFrame.vao);
 
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 	m_deferred.shader->disableShader();
 }
+
 
 int main() {
 	glfwInit();
@@ -1223,6 +1352,7 @@ void initializeGL() {
 	
 	genTexture_init();
 	deferred_init();
+	// dirShadow_init();
 
 	m_cameraProjection = perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
@@ -1269,12 +1399,13 @@ void paintGL() {
 	m_renderer->renderPass();
 	// [TODO] implement your rendering function here
 	m_objects_render();
-	
-	
+
+	// light pass: shadow
+	// dirShadow_render();
+
 	// geometry pass: pos, normal
 	deferred_bindFrameBuffer();
 
-	// light pass: shadow
 	//Calshadow(); //-> shadowmap: depth map
 	
 	deferred_render();
@@ -1418,6 +1549,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		case GLFW_KEY_9:
 			CURRENT_TEX = TEXTURE_BLOOMHDR;
 			cout << "Texture is [BLOOMHDR]" << endl;
+			break;
+		case GLFW_KEY_0:
+			CURRENT_TEX = TEXTURE_PHONGSHADOW;
+			cout << "Texture is [PHONG with SHADOW]" << endl;
 			break;
 		default:
 			break;

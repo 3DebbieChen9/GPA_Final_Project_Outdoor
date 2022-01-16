@@ -2,6 +2,7 @@
 
 layout(location = 0) out vec4 phongColor; // Phong-Shading Result
 layout(location = 1) out vec4 bloomHDR;
+layout(location = 2) out vec4 phongShadow;
 
 in VS_OUT
 {
@@ -10,6 +11,7 @@ in VS_OUT
 
 uniform vec3 uv3LightPos;
 uniform vec3 uv3eyePos;
+uniform mat4 um4LightVP;
 
 uniform sampler2D tex_diffuse;
 uniform sampler2D tex_ambient;
@@ -17,7 +19,51 @@ uniform sampler2D tex_specular;
 uniform sampler2D tex_ws_position;
 uniform sampler2D tex_ws_normal;
 uniform sampler2D tex_ws_tangent;
+uniform sampler2D tex_dirDepth;
 
+float CalcDirShadow(vec3 normal){
+    float shadow = 0.0;
+
+    // transform frag to light space
+    // vec4 fragInLight = light_vp * vec4(vertexData.FragPos, 1.0);
+    vec3 fragPos = texelFetch(tex_ws_position, ivec2(gl_FragCoord.xy), 0).xyz;
+	vec4 fragInLight = um4LightVP * vec4(fragPos, 1.0);
+
+    // normalize to -1~1
+    vec3 proj_coord = fragInLight.xyz / fragInLight.w;
+    proj_coord = proj_coord * 0.5 + 0.5;
+
+    float closestDepth = texture(tex_dirDepth, proj_coord.xy).r;  // depth from light's view
+    float currentDepth = proj_coord.z;  // depth of current fragment
+    
+    // acne shadow
+    // if(dir_flag == 1){
+    //     shadow = currentDepth > closestDepth ? 1.0 : 0.0;
+    //     return shadow;
+    // }
+
+    // adaptive bias
+    // vec3 normal = normalize(vertexData.N);
+    // vec3 normal = ??????
+    vec3 light_dir = normalize(uv3LightPos - fragPos);
+    // float bias = max(0.05 * (1.0 - dot(normal, light_dir)), 0.005);
+    float bias = 0.0005;
+
+    // PCF
+    vec2 tex_size = 1.0 / textureSize(tex_dirDepth ,0);
+    for(int x =-1; x <= 1; x++){
+        for(int y=-1; y <=1; y++){
+            float pcf_depth = texture(tex_dirDepth, proj_coord.xy + vec2(x, y) * tex_size).r;
+            shadow += currentDepth - bias > pcf_depth ? 1.0 : 0.0;
+        }
+    }
+    shadow /= 9.0;
+
+    if(proj_coord.z > 1.0)  // outside far plane
+        shadow = 0.0;
+
+    return shadow;
+}
 
 vec3 phongShading() {
 
@@ -62,6 +108,10 @@ vec3 phongShading() {
 	vec3 ambient = texture(tex_ambient, fs_in.texcoord).rgb;
 
 	vec3 color = ambient * vec3(0.1) + diffuse * vec3(0.8) + specular * vec3(0.1);
+
+	// Shadow
+	float shadow = CalcDirShadow(fs_N);
+	phongShadow = vec4((vec3(0.1) * ambient + (1.0 - shadow)) *  (vec3(0.8) * diffuse + vec3(0.1) * specular), 1.0f);
 
 	// Point Light
 	vec3 pointLightPos = vec3(636.48, 134.79, 495.98);

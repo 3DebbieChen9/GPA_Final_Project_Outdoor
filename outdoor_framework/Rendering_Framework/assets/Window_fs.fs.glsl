@@ -8,7 +8,8 @@
 #define TEXTURE_WS_NORMAL 10
 #define TEXTURE_WS_TANGENT 11
 #define TEXTURE_PHONG 12
-#define TEXTURE_BLOOMHDR 13
+#define TEXTURE_PHONGSHADOW 13
+#define TEXTURE_BLOOMHDR 14
 
 layout(location = 0) out vec4 fragColor;
 
@@ -27,6 +28,7 @@ uniform sampler2D tex_ws_normal;
 uniform sampler2D tex_ws_tangent;
 uniform sampler2D tex_phong;
 uniform sampler2D tex_bloomHDR;
+uniform sampler2D tex_phongShadow;
 
 void genBloom() {
 	int half_size = 4; // blur factor
@@ -78,6 +80,9 @@ void main()
 			break;
 		case TEXTURE_BLOOMHDR:
 			fragColor = vec4(texture(tex_bloomHDR, fs_in.texcoord).rgb, 1.0f);
+			break;
+		case TEXTURE_PHONGSHADOW:
+			fragColor = vec4(texture(tex_phongShadow, fs_in.texcoord).rgb, 1.0f);
 			break;
 		default:
 			genBloom();
