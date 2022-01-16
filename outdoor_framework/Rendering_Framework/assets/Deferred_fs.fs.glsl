@@ -85,7 +85,7 @@ vec3 phongShading() {
 	// N =TBN * normal
 	// light * N
 
-	// Directional Light
+	// Parallel Light
 	vec3 vs_L = -uv3LightPos; //- vs_P.xyz;
 	vec3 lightDir = vs_L;
 	// vec3 lightDir = normalize(vec3(dot(vs_L, vs_T), dot(vs_L, vs_B), dot(vs_L, vs_N))); /// out

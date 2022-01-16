@@ -1414,7 +1414,7 @@ void paintGL() {
 	//Calshadow(); //-> shadowmap: depth map
 	
 	deferred_render();
-	
+
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	m_window_render();
 }
