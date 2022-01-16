@@ -37,10 +37,11 @@ float CalcDirShadow(vec3 normal){
     float currentDepth = proj_coord.z;  // depth of current fragment
     
     // acne shadow
-    // if(dir_flag == 1){
-    //     shadow = currentDepth > closestDepth ? 1.0 : 0.0;
-    //     return shadow;
-    // }
+	int dir_flag = 1;
+    if(dir_flag == 1){
+        shadow = currentDepth > closestDepth ? 1.0 : 0.0;
+        return shadow;
+    }
 
     // adaptive bias
     // vec3 normal = normalize(vertexData.N);
@@ -112,8 +113,15 @@ vec3 phongShading() {
 
 	// Shadow
 	float shadow = CalcDirShadow(fs_N);
-	phongShadow = vec4((vec3(0.1) * ambient + (1.0 - shadow)) *  (vec3(0.8) * diffuse + vec3(0.1) * specular), 1.0f);
-	
+	// phongShadow = vec4((vec3(0.1) * ambient + (1.0 - shadow)) *  (vec3(0.8) * diffuse + vec3(0.1) * specular), 1.0f);
+
+	vec3 org_diffuse = texture(tex_diffuse, fs_in.texcoord).rgb;
+	vec3 org_ambient = texture(tex_ambient, fs_in.texcoord).rgb;
+	vec3 org_specular = texture(tex_specular, fs_in.texcoord).rgb;
+	phongShadow = vec4((vec3(0.1) * org_ambient + (1.0 - shadow)) *  (vec3(0.8) * org_diffuse + vec3(0.1) * org_specular), 1.0f);
+
+
+
 	// Point Light
 	vec3 pointLightPos = vec3(636.48, 134.79, 495.98);
 	vec3 point_L = pointLightPos - vs_P.xyz;
