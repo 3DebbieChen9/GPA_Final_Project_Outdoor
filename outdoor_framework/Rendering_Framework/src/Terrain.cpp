@@ -54,6 +54,16 @@ Terrain::~Terrain()
 
 }
 
+void Terrain::updateShadowMap(GLuint programID) {
+	// Bind Buffer
+	glBindVertexArray(m_vao);	
+	for (int i = 0; i < 4; i++) {		
+		glUniformMatrix4fv(glGetUniformLocation(programID, "um4m"), 1, false, glm::value_ptr(this->m_chunkRotMat[i]));
+		int indicesPointer = this->m_elevationTex->m_vertexStart * 4;
+		glDrawElements(GL_TRIANGLES, this->m_elevationTex->m_vertexCount, GL_UNSIGNED_INT, (GLvoid*)(indicesPointer));
+	}	
+}
+
 void Terrain::update() {
 	const SceneManager *manager = SceneManager::Instance();
 

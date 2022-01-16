@@ -4,8 +4,6 @@ layout (location = 0) in vec3 iv3vertex;
 
 uniform mat4 light_vp;
 uniform mat4 um4m;
-uniform mat4 um4mv;
-uniform mat4 um4p;
 
 void main()
 {

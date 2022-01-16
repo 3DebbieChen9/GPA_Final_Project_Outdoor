@@ -50,6 +50,7 @@ private:
 
 public:
 	void update();
+	void updateShadowMap(GLuint programID);
 
 public:
 	void setCameraPosition(const glm::vec3 &pos);

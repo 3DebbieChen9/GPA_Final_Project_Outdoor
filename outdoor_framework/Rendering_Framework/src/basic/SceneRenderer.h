@@ -21,6 +21,7 @@ private:
 	int m_frameWidth;
 	int m_frameHeight;
 
+public:
 	Terrain *m_terrain = nullptr;
 
 public:

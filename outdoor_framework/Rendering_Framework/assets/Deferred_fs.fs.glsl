@@ -86,7 +86,8 @@ vec3 phongShading() {
 	// light * N
 
 	// Parallel Light
-	vec3 vs_L = -uv3LightPos; //- vs_P.xyz;
+	vec3 vs_L = 1000.0f * normalize(vec3(0.2f, 0.6f, 0.5f)); 
+	//vec3 vs_L = uv3LightPos; //- vs_P.xyz;
 	vec3 lightDir = vs_L;
 	// vec3 lightDir = normalize(vec3(dot(vs_L, vs_T), dot(vs_L, vs_B), dot(vs_L, vs_N))); /// out
 	vec3 vs_V = uv3eyePos - vs_P.xyz;
@@ -99,11 +100,11 @@ vec3 phongShading() {
 
 	vec3 fs_R = reflect(-fs_L, fs_N);
 
-	vec3 diffuse_albedo = vec3(1.0) * texture(tex_diffuse, fs_in.texcoord).rgb;
+	vec3 diffuse_albedo = vec3(2.0) * texture(tex_diffuse, fs_in.texcoord).rgb;
 	vec3 diffuse = max(dot(fs_N, fs_L), 0.0) * diffuse_albedo;
 
 	vec3 specular_albedo = texture(tex_specular, fs_in.texcoord).rgb;
-	vec3 specular = max(pow(dot(fs_R, fs_V), 900.0), 0.0) * specular_albedo;
+	vec3 specular = max(pow(dot(fs_R, fs_V), 64.0), 0.0) * specular_albedo;
 
 	vec3 ambient = texture(tex_ambient, fs_in.texcoord).rgb;
 
@@ -112,7 +113,7 @@ vec3 phongShading() {
 	// Shadow
 	float shadow = CalcDirShadow(fs_N);
 	phongShadow = vec4((vec3(0.1) * ambient + (1.0 - shadow)) *  (vec3(0.8) * diffuse + vec3(0.1) * specular), 1.0f);
-
+	
 	// Point Light
 	vec3 pointLightPos = vec3(636.48, 134.79, 495.98);
 	vec3 point_L = pointLightPos - vs_P.xyz;
@@ -125,8 +126,11 @@ vec3 phongShading() {
 	specular = max(pow(dot(fs_R, fs_V), 900.0), 0.0) * specular_albedo;
 
 	float dist = distance(pointLightPos, vs_P.xyz);
+	
+	// Bloom Sphere
 	if(dist <= 2.0f) {
 		color = vec3(1.0f) * vec3(0.7f) + diffuse * vec3(0.3);
+		phongShadow = vec4(vec3(1.0f) * vec3(0.7f) + diffuse * vec3(0.3), 1.0f);
 	}
 	float attenuation = 50.0f / (pow(dist, 2) + 0.5);
 	// float attenuation = 1.0f /  (pow(dist, 2) + 1.0);

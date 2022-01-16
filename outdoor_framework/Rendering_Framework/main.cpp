@@ -63,7 +63,8 @@ vec2 m_oldDistance = vec2(0, 0);
 vec2 m_rotateAngle = vec2(0.0f, 0.0f);
 #pragma endregion
 
-vec3 lightPosition = vec3(0.2f, 0.6f, 0.5f);
+// vec3 lightPosition = vec3(0.2f, 0.6f, 0.5f);
+vec3 lightPosition = vec3(636.48, 100.79, 495.98);
 void vsyncEnabled(GLFWwindow *window);
 void vsyncDisabled(GLFWwindow *window);
 
@@ -157,6 +158,26 @@ TextureData loadImg(const char* path)
 }
 #pragma endregion
 
+struct {
+	GLuint diffuse;
+	GLuint ambient;
+	GLuint specular;
+
+	GLuint ws_position;
+	GLuint ws_normal;
+	GLuint ws_tangent;
+
+	GLuint phongColor;
+	GLuint bloomHDR;
+	GLuint phongShadow;
+
+	GLuint dirDepth;
+
+	GLuint finalTex;
+} frameBufferTexture;
+
+int CURRENT_TEX = TEXTURE_FINAL; // Default as FINAL
+
 Shader *m_objectShader = nullptr;
 struct {
 	struct {
@@ -199,6 +220,36 @@ struct {
 	bool hasNormalMap = false;
 	bool useNormalMap = false;
 } m_sphere;
+
+struct {
+	Shader *shader;
+	GLuint depthFBO;
+	int shadowSize = 2048;
+	float near = 0.0f, far = 1000.0f;
+	vec3 LightPos = vec3(636.48, 134.79, 495.98);
+	vec3 LightDir = vec3(0.2, 0.6, 0.5);
+	mat4 LightVP = mat4(1.0f);
+
+	// vec3 dir_light_pos = vec3(-1.14f, 3.0f, 0.77f);
+	// vec3 dir_light = vec3(-2.51449f, 0.477241f, -1.21263f);
+	// // vec3 dir_light = vec3(-2.51449f, -0.477241f, -1.21263f);
+	// float dir_shadow_near=0.0f, dir_shadow_far=10.0f;
+	// mat4 dir_light_vp;
+} m_dirShadow;
+struct {
+	Shader* shader;
+	GLuint vao;
+	GLuint vbo;
+} m_windowFrame;
+struct {
+	GLuint fbo;
+	GLuint depthRBO;
+} m_genTexture;
+struct {
+	Shader *shader;
+	GLuint fbo;
+	GLuint depthRBO;
+} m_deferred;
 
 void m_airplane_loadModel() {
 	char* filepath = ".\\models\\airplane.obj";
@@ -270,9 +321,9 @@ void m_airplane_loadModel() {
 			texcoord.push_back(mesh->mTextureCoords[0][v][0]);
 			texcoord.push_back(mesh->mTextureCoords[0][v][1]);
 			// mesh->mNormals[v][0~2] => normal
-			normal.push_back(-mesh->mNormals[v][0]);
-			normal.push_back(-mesh->mNormals[v][1]);
-			normal.push_back(-mesh->mNormals[v][2]);
+			normal.push_back(mesh->mNormals[v][0]);
+			normal.push_back(mesh->mNormals[v][1]);
+			normal.push_back(mesh->mNormals[v][2]);
 
 			if (mesh->HasTangentsAndBitangents()) {
 				// mesh->mTangents[v][0~2] => tangent
@@ -323,7 +374,7 @@ void m_airplane_loadModel() {
 		// bittangent
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_bittangents);
 		glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &bittangent[0], GL_STATIC_DRAW);
-		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(4);
 
 		vector<unsigned int> face;
@@ -483,7 +534,7 @@ void m_house_loadModel() {
 		// bittangent
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_bittangents);
 		glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &bittangent[0], GL_STATIC_DRAW);
-		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(4);
 
 		vector<unsigned int> face;
@@ -609,7 +660,7 @@ void m_sphere_loadModel() {
 		// bittangent
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_bittangents);
 		glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * 3 * sizeof(float), &bittangent[0], GL_STATIC_DRAW);
-		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(4);
 
 		vector<unsigned int> face;
@@ -678,6 +729,58 @@ void m_objects_init() {
 	glUniform1i(glGetUniformLocation(programID, "diffuseTexture"), 3);
 	glUniform1i(glGetUniformLocation(programID, "normalTexture"), 4);
 	m_objectShader->disableShader();
+}
+void m_objects_shadowRender() {
+	
+	m_dirShadow.shader->useShader();
+	const GLuint programID = m_dirShadow.shader->getProgramID();
+
+	glUniformMatrix4fv(glGetUniformLocation(programID, "light_vp"), 1, GL_FALSE, value_ptr(m_dirShadow.LightVP));
+
+	// Draw Airplane
+	m_airplane.matrix.rotate = m_airplaneRotMat;
+	m_airplane.matrix.model = translate(mat4(1.0f), m_airplanePosition);
+	glUniformMatrix4fv(glGetUniformLocation(programID, "um4m"), 1, GL_FALSE, value_ptr(m_airplane.matrix.model * m_airplane.matrix.rotate));
+	for (int i = 0; i < m_airplane.shapes.size(); i++) {
+		int materialID = m_airplane.shapes[i].materialID;
+
+		glBindVertexArray(m_airplane.shapes[i].vao);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_airplane.shapes[i].ibo);
+
+		glDrawElements(GL_TRIANGLES, m_airplane.shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+	// Draw HouseA
+	glUniformMatrix4fv(glGetUniformLocation(programID, "um4m"), 1, GL_FALSE, value_ptr(m_houses.matrixA.model * m_houses.matrixA.rotate));
+	for (int i = 0; i < m_houses.shapes.size(); i++) {
+		int materialID = m_houses.shapes[i].materialID;
+
+		glBindVertexArray(m_houses.shapes[i].vao);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_houses.shapes[i].ibo);
+
+		glDrawElements(GL_TRIANGLES, m_houses.shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+	// Draw HouseB
+	glUniformMatrix4fv(glGetUniformLocation(programID, "um4m"), 1, GL_FALSE, value_ptr(m_houses.matrixB.model * m_houses.matrixB.rotate));
+	for (int i = 0; i < m_houses.shapes.size(); i++) {
+		int materialID = m_houses.shapes[i].materialID;
+
+		glBindVertexArray(m_houses.shapes[i].vao);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_houses.shapes[i].ibo);
+
+		glDrawElements(GL_TRIANGLES, m_houses.shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+	m_renderer->m_terrain->updateShadowMap(programID);
+	
+	m_dirShadow.shader->disableShader();
 }
 void m_objects_render() {
 	m_airplane.matrix.rotate = m_airplaneRotMat;
@@ -796,31 +899,8 @@ void spherer_render() {
 	m_objectShader->disableShader();
 }
 
-struct {
-	GLuint diffuse;
-	GLuint ambient;
-	GLuint specular;
 
-	GLuint ws_position;
-	GLuint ws_normal;
-	GLuint ws_tangent;
 
-	GLuint phongColor;
-	GLuint bloomHDR;
-	GLuint phongShadow;
-
-	GLuint dirDepth;
-
-	GLuint finalTex;
-} frameBufferTexture;
-
-int CURRENT_TEX = TEXTURE_PHONG; // Default as FINAL
-
-struct {
-	Shader* shader;
-	GLuint vao;
-	GLuint vbo;
-} m_windowFrame;
 float window_positions[16] = {
 		 1.0f, -1.0f,  1.0f,  0.0f,
 		-1.0f, -1.0f,  0.0f,  0.0f,
@@ -920,10 +1000,8 @@ void m_window_render() {
 	m_windowFrame.shader->disableShader();
 }
 
-struct {
-	GLuint fbo;
-	GLuint depthRBO;
-} m_genTexture;
+
+
 void genTexture_setBuffer() {
 	glDeleteRenderbuffers(1, &m_genTexture.depthRBO);
 	glDeleteTextures(1, &frameBufferTexture.diffuse);
@@ -1008,30 +1086,11 @@ void genTexture_init() {
 	genTexture_setBuffer();
 }
 
-struct {
-	Shader *shader;
-	GLuint depthFBO;
-	int shadowSize = 2048;
-	float near = 0.0f, far = 10.0f;
-	vec3 LightPos = vec3(636.48, 134.79, 495.98);
-	vec3 LightDir = vec3(0.2, 0.6, 0.5);
-	mat4 LightVP = mat4(1.0f);
 
-	// vec3 dir_light_pos = vec3(-1.14f, 3.0f, 0.77f);
-	// vec3 dir_light = vec3(-2.51449f, 0.477241f, -1.21263f);
-	// // vec3 dir_light = vec3(-2.51449f, -0.477241f, -1.21263f);
-	// float dir_shadow_near=0.0f, dir_shadow_far=10.0f;
-	// mat4 dir_light_vp;
-} m_dirShadow;
+void dirShadow_setBuffer() {
+	glDeleteTextures(1, &frameBufferTexture.dirDepth);
 
-void dirShadow_init() {
-	// Shader Init
-	m_dirShadow.shader = new Shader("assets\\DirectionalShadow_vs.vs.glsl", "assets\\DirectionalShadow_fs.fs.glsl");
-	
-	// dir_shader.initShader("dir_light.vs.glsl", "dir_light.fs.glsl");
-
-	// depth FBO
-	glGenFramebuffers(1, &m_dirShadow.depthFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_dirShadow.depthFBO);
 
 	// depth texture
 	glGenTextures(1, &frameBufferTexture.dirDepth);
@@ -1044,80 +1103,67 @@ void dirShadow_init() {
 	GLfloat borderColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
-	// attach depth texture
-	glBindFramebuffer(GL_FRAMEBUFFER, m_dirShadow.depthFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, frameBufferTexture.dirDepth, 0);
+	
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+		cout << "direct light framebuffer error" << endl;
+	}
+	// // back to default framebuffer
+	// glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+void dirShadow_init() {
+	// depth FBO
+	glGenFramebuffers(1, &m_dirShadow.depthFBO);
+	dirShadow_setBuffer();
+
+	// Shader Init
+	m_dirShadow.shader = new Shader("assets\\DirectionalShadow_vs.vs.glsl", "assets\\DirectionalShadow_fs.fs.glsl");
+	m_dirShadow.shader->useShader();
+	const GLuint programID = m_dirShadow.shader->getProgramID();
+	cout << "m_dirShadow programID: " << programID << endl;
+	glUniformMatrix4fv(glGetUniformLocation(programID, "light_vp"), 1, GL_FALSE, value_ptr(m_dirShadow.LightVP));
+	glUniformMatrix4fv(glGetUniformLocation(programID, "um4m"), 1, GL_FALSE, value_ptr(mat4(1.0f)));
+	m_dirShadow.shader->disableShader();
+	
+}
+void dirShadow_bindFrameBuffer() {
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 
-	 if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-		 cout << "direct light framebuffer error" << endl;
-	 }
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	static const GLfloat blue[] = { 0.0f, 0.0f, 0.5f, 1.0f };
+	static const GLfloat one = 1.0f;
 
-	// back to default framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClearBufferfv(GL_COLOR, 0, blue);
+	glClearBufferfv(GL_DEPTH, 0, &one);
 }
-void dirShadow_render() {
-
-    // glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-	// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+void dirShadow_render() {	
 
 	// global state
 	glEnable(GL_DEPTH_TEST);
 
 	// render depth map
 	glBindFramebuffer(GL_FRAMEBUFFER, m_dirShadow.depthFBO);
-	m_dirShadow.shader->useShader();
-	const GLuint programID = m_dirShadow.shader->getProgramID();
 
 	glViewport(0, 0, m_dirShadow.shadowSize, m_dirShadow.shadowSize);
-	// glClear(GL_DEPTH_BUFFER_BIT);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 	mat4 light_p, light_v;
-	float range = 5.0f;
+	// float range = 5.0f;
+	float range = 20.0f;
 	
 	light_p = ortho(-range, range, -range, range, m_dirShadow.near, m_dirShadow.far);
 	light_v = lookAt(m_dirShadow.LightPos, m_dirShadow.LightPos - m_dirShadow.LightDir, vec3(0.0f, 1.0f, 0.0));
 	m_dirShadow.LightVP = light_p * light_v;
 
-	glUniformMatrix4fv(glGetUniformLocation(programID, "light_vp"), 1, GL_FALSE, value_ptr(m_dirShadow.LightVP));
-	m_dirShadow.shader->disableShader();
+	m_objects_shadowRender();
 
-
-	// glViewport(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
-	// render_models(dir_shadow_shader, false);
-
-	// render normally
-	// glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	// dir_shader.use();
-	// glViewport(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+	glViewport(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+	// glDisable(GL_DEPTH_TEST);
 	// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
-	// light setting
-	// glUniform3fv(dir_shader.get("view_pos"), 1, &camera.Position[0]);
-	// glUniform3fv(dir_shader.get("light_pos"), 1, &dir_light[0]);
-	// glUniformMatrix4fv(dir_shader.get("light_vp"), 1, GL_FALSE, value_ptr(dir_light_vp));
-	// dir_shader.setFloat("near_plane", dir_shadow_near);
-	// dir_shader.setFloat("far_plane", dir_shadow_far);
-
-
-	// dir_shader.setInt("shadow_flag", shadow_flag); // enable or disable shadow
-	// dir_shader.setInt("dir_flag", dir_flag); // event flag
-
-	// // set shadow to texture unit 2
-	// glActiveTexture(GL_TEXTURE2);
-	// glBindTexture(GL_TEXTURE_2D, dir_depth_map);
-
-	// render_models(dir_shader, true);
 }
 
 
-struct {
-	Shader *shader;
-	GLuint fbo;
-	GLuint depthRBO;
-} m_deferred;
+
 
 void deferred_setBuffer() {
 	glDeleteRenderbuffers(1, &m_deferred.depthRBO);
@@ -1356,9 +1402,9 @@ void initializeGL() {
 	m_window_init();
 	
 	genTexture_init();
+	dirShadow_init();
 	deferred_init();
-	// dirShadow_init();
-
+	
 	m_cameraProjection = perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
 }
@@ -1368,6 +1414,7 @@ void resizeGL(GLFWwindow *window, int w, int h) {
 	glViewport(0, 0, w, h);
 	m_renderer->resize(w, h);
 	genTexture_setBuffer();
+	dirShadow_setBuffer();
 	deferred_setBuffer();
 	m_cameraProjection = perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
@@ -1403,17 +1450,17 @@ void paintGL() {
 	// render terrain
 	m_renderer->renderPass();
 	// [TODO] implement your rendering function here
+	// shader set flag 0
 	m_objects_render();
+	// shader set flag 1
 	spherer_render();
 	// light pass: shadow
-	// dirShadow_render();
+	dirShadow_bindFrameBuffer();
+	dirShadow_render(); // shadow map
 
 	// geometry pass: pos, normal
 	deferred_bindFrameBuffer();
-
-	//Calshadow(); //-> shadowmap: depth map
-	
-	deferred_render();
+	deferred_render(); // bind shadow map
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	m_window_render();
