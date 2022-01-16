@@ -1404,7 +1404,7 @@ void paintGL() {
 	m_renderer->renderPass();
 	// [TODO] implement your rendering function here
 	m_objects_render();
-
+	spherer_render();
 	// light pass: shadow
 	// dirShadow_render();
 
@@ -1414,8 +1414,7 @@ void paintGL() {
 	//Calshadow(); //-> shadowmap: depth map
 	
 	deferred_render();
-	spherer_render();
-
+	
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	m_window_render();
 }

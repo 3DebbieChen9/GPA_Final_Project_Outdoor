@@ -31,7 +31,7 @@ uniform sampler2D tex_bloomHDR;
 uniform sampler2D tex_phongShadow;
 
 void genBloom() {
-	int half_size = 4; // blur factor
+	int half_size = 7; // blur factor
 	vec4 color_sum = vec4(0);
 
 	for (int i = -half_size; i <= half_size; ++i) {

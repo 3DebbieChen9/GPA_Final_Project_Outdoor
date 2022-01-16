@@ -125,6 +125,9 @@ vec3 phongShading() {
 	specular = max(pow(dot(fs_R, fs_V), 900.0), 0.0) * specular_albedo;
 
 	float dist = distance(pointLightPos, vs_P.xyz);
+	if(dist <= 2.0f) {
+		color = vec3(1.0f) * vec3(0.7f) + diffuse * vec3(0.3);
+	}
 	float attenuation = 50.0f / (pow(dist, 2) + 0.5);
 	// float attenuation = 1.0f /  (pow(dist, 2) + 1.0);
 
