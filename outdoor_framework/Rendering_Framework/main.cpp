@@ -1546,19 +1546,15 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 			cout << "Current eye at (" << m_eye[0] << ", " << m_eye[1] << ", " << m_eye[2] << ")" << endl;
 			break;
 		case GLFW_KEY_C:
-			cout << "before m_eye" << m_eye[0] << " " << m_eye[1] << " " << m_eye[2] << endl;
-			cout << "before m_lookAtCenter" << m_lookAtCenter[0] << " " << m_lookAtCenter[1] << " " << m_lookAtCenter[2] << endl;
 			vec3 tmpCenter = vec3(0.0f);
 			cout << endl << "Input look-at center (split with space): " << endl;
 			scanf("%f %f %f", &tmpCenter[0], &tmpCenter[1], &tmpCenter[2]);
 			cout << endl << "Current look-at center at (" << tmpCenter[0] << ", " << tmpCenter[1] << ", " << tmpCenter[2] << ")" << endl;
 			m_lookDirection = tmpCenter - m_eye;
-			// scanf("%f %f %f", &m_lookAtCenter[0], &m_lookAtCenter[1], &m_lookAtCenter[2]);
-			// cout << endl << "Current look-at center at (" << m_lookAtCenter[0] << ", " << m_lookAtCenter[1] << ", " << m_lookAtCenter[2] << ")" << endl;
 			break;
 		case GLFW_KEY_V:
-			cout << "after m_eye" << m_eye[0] << " " << m_eye[1] << " " << m_eye[2] << endl;
-			cout << "after m_lookAtCenter" << m_lookAtCenter[0] << " " << m_lookAtCenter[1] << " " << m_lookAtCenter[2] << endl;
+			cout << "m_eye" << m_eye[0] << " " << m_eye[1] << " " << m_eye[2] << endl;
+			cout << "m_lookAtCenter" << m_lookAtCenter[0] << " " << m_lookAtCenter[1] << " " << m_lookAtCenter[2] << endl;
 			cout << "plane pos" << m_airplanePosition[0] << " " << m_airplanePosition[1] << " " << m_airplanePosition[2] << endl;
 			break;
 		case GLFW_KEY_1:
