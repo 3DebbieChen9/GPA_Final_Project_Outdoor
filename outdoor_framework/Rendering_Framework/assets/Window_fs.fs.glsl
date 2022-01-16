@@ -10,6 +10,7 @@
 #define TEXTURE_PHONG 12
 #define TEXTURE_PHONGSHADOW 13
 #define TEXTURE_BLOOMHDR 14
+#define TEXTURE_BLOOM 15
 
 layout(location = 0) out vec4 fragColor;
 
@@ -29,30 +30,14 @@ uniform sampler2D tex_ws_tangent;
 uniform sampler2D tex_phong;
 uniform sampler2D tex_bloomHDR;
 uniform sampler2D tex_phongShadow;
+uniform sampler2D tex_bloom;
 
-void genBloom() {
-	int half_size = 7; // blur factor
-	vec4 color_sum = vec4(0);
-
-	for (int i = -half_size; i <= half_size; ++i) {
-		for (int j = -half_size; j <= half_size; ++j) {
-			ivec2 coord = ivec2(gl_FragCoord.xy) + ivec2(i, j);
-			color_sum += texelFetch(tex_bloomHDR, coord, 0);
-		}
-	}
-	int sample_count = (half_size * 2 + 1) * (half_size * 2 + 1);
-	vec4 color = color_sum / sample_count;
-	vec3 originalColor = texture(tex_phong, fs_in.texcoord).rgb;
-	// fragColor = vec4((originalColor * vec3(0.2) + color.xyz * vec3(0.8)), 1.0f);
-	fragColor = vec4((originalColor + color.xyz), 1.0f);
-}
 
 void main()
 {
-	float tmpX = 0.0, tmpY = 0.0, tmpZ = 0.0;
 	switch(currentTex) {
 		case TEXTURE_FINAL:
-			genBloom();
+			fragColor = vec4(texture(tex_bloom, fs_in.texcoord).rgb, 1.0f);
 			break;
 		case TEXTURE_DIFFUSE:
 			fragColor = vec4(texture(tex_diffuse, fs_in.texcoord).rgb, 1.0f);
@@ -85,8 +70,11 @@ void main()
 		case TEXTURE_PHONGSHADOW:
 			fragColor = vec4(texture(tex_phongShadow, fs_in.texcoord).rgb, 1.0f);
 			break;
+		case TEXTURE_BLOOM:
+			fragColor = vec4(texture(tex_bloom, fs_in.texcoord).rgb, 1.0f);
+			break;
 		default:
-			genBloom();
+			fragColor = vec4(texture(tex_bloom, fs_in.texcoord).rgb, 1.0f);
 			break;
 	}
 }

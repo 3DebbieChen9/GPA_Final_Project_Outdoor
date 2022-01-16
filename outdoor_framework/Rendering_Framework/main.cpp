@@ -20,7 +20,7 @@
 #define TEXTURE_PHONG 12
 #define TEXTURE_PHONGSHADOW 13
 #define TEXTURE_BLOOMHDR 14
-
+#define TEXTURE_BLOOM 15
 
 using namespace glm;
 using namespace std;
@@ -174,7 +174,7 @@ struct {
 
 	GLuint dirDepth;
 
-	GLuint finalTex;
+	GLuint bloom;
 } frameBufferTexture;
 
 int CURRENT_TEX = TEXTURE_FINAL; // Default as FINAL
@@ -940,6 +940,8 @@ void m_window_init() {
 	glActiveTexture(GL_TEXTURE13);
 	glUniform1i(glGetUniformLocation(programID, "tex_phongShadow"), 14);
 	glActiveTexture(GL_TEXTURE14);
+	glUniform1i(glGetUniformLocation(programID, "tex_bloom"), 15);
+	glActiveTexture(GL_TEXTURE15);
 	m_windowFrame.shader->disableShader();
 }
 void m_window_render() {
@@ -986,6 +988,10 @@ void m_window_render() {
 	glUniform1i(glGetUniformLocation(programID, "tex_phongShadow"), 14);
 	glActiveTexture(GL_TEXTURE14);
 	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.phongShadow);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_bloom"), 15);
+	glActiveTexture(GL_TEXTURE15);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.bloom);
 
 	glBindVertexArray(m_windowFrame.vao);
 
@@ -1281,6 +1287,74 @@ void deferred_render() {
 	m_deferred.shader->disableShader();
 }
 
+struct {
+	Shader* shader;
+	GLuint fbo;
+} m_bloom;
+
+void bloom_setBuffer() {
+	glDeleteTextures(1, &frameBufferTexture.bloom);
+
+	// Frame Buffer
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_bloom.fbo);
+
+	//// Texture | 0: phongColor 
+	glGenTextures(1, &frameBufferTexture.bloom);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.bloom);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameBufferTexture.bloom, 0);
+
+	// finally check if framebuffer is complete
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "final framebuffer not complete!" << std::endl;
+}
+void bloom_bindFrameBuffer() {
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_bloom.fbo);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	static const GLfloat blue[] = { 0.0f, 0.0f, 0.5f, 1.0f };
+	static const GLfloat one = 1.0f;
+
+	glClearBufferfv(GL_COLOR, 0, blue);
+	glClearBufferfv(GL_DEPTH, 0, &one);
+}
+void bloom_init() {
+	glGenFramebuffers(1, &m_bloom.fbo);
+	bloom_setBuffer();
+
+	m_bloom.shader = new Shader("assets\\Bloom_vs.vs.glsl", "assets\\Bloom_fs.fs.glsl");
+	m_bloom.shader->useShader();
+	const GLuint programID = m_bloom.shader->getProgramID();
+	cout << "m_bloom programID: " << programID << endl;
+	
+	glUniform1i(glGetUniformLocation(programID, "tex_phong"), 12);
+	glActiveTexture(GL_TEXTURE12);
+	glUniform1i(glGetUniformLocation(programID, "tex_bloomHDR"), 13);
+	glActiveTexture(GL_TEXTURE13);
+	
+	m_bloom.shader->disableShader();
+}
+void bloom_render() {
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	m_bloom.shader->useShader();
+	const GLuint programID = m_bloom.shader->getProgramID();
+	glUniform1i(glGetUniformLocation(programID, "tex_phong"), 12);
+	glActiveTexture(GL_TEXTURE12);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.phongColor);
+
+	glUniform1i(glGetUniformLocation(programID, "tex_bloomHDR"), 13);
+	glActiveTexture(GL_TEXTURE13);
+	glBindTexture(GL_TEXTURE_2D, frameBufferTexture.bloomHDR);
+
+	glBindVertexArray(m_windowFrame.vao);
+
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	m_bloom.shader->disableShader();
+}
 
 int main() {
 	glfwInit();
@@ -1388,6 +1462,7 @@ void initializeGL() {
 	genTexture_init();
 	dirShadow_init();
 	deferred_init();
+	bloom_init();
 	
 	m_cameraProjection = perspective(glm::radians(60.0f), FRAME_WIDTH * 1.0f / FRAME_HEIGHT, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
@@ -1400,6 +1475,7 @@ void resizeGL(GLFWwindow *window, int w, int h) {
 	genTexture_setBuffer();
 	dirShadow_setBuffer();
 	deferred_setBuffer();
+	bloom_setBuffer();
 	m_cameraProjection = perspective(glm::radians(60.0f), w * 1.0f / h, 0.1f, 1000.0f);
 	m_renderer->setProjection(m_cameraProjection);
 }
@@ -1445,6 +1521,9 @@ void paintGL() {
 	// geometry pass: pos, normal
 	deferred_bindFrameBuffer();
 	deferred_render(); // bind shadow map
+
+	bloom_bindFrameBuffer();
+	bloom_render();
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	m_window_render();
@@ -1596,6 +1675,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		case GLFW_KEY_0:
 			CURRENT_TEX = TEXTURE_PHONGSHADOW;
 			cout << "Texture is [PHONG with SHADOW]" << endl;
+			break;
+		case GLFW_KEY_P:
+			CURRENT_TEX = TEXTURE_BLOOM;
+			cout << "Texture is [BLOOM + PHONG]" << endl;
 			break;
 		default:
 			break;
