@@ -225,7 +225,7 @@ struct {
 struct {
 	Shader *shader;
 	GLuint depthFBO;
-	int shadowSize = 2048;
+	int shadowSize = 4096;
 	float near = 0.0f, far = 500.0f;
 	vec3 LightPos = vec3(636.48, 134.79, 495.98);
 	vec3 LightDir = vec3(0.2, 0.6, 0.5);
@@ -773,7 +773,7 @@ void m_objects_shadowRender() {
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
-	m_renderer->m_terrain->updateShadowMap(programID);
+	// m_renderer->m_terrain->updateShadowMap(programID);
 	
 	m_dirShadow.shader->disableShader();
 }
@@ -1137,8 +1137,8 @@ void dirShadow_render() {
 	glViewport(0, 0, m_dirShadow.shadowSize, m_dirShadow.shadowSize);
 
 	mat4 light_p, light_v;
-	// float range = 5.0f;
-	float range = 20.0f;
+	float range = 5.0f;
+	// float range = 20.0f;
 	
 	light_p = ortho(-range, range, -range, range, m_dirShadow.near, m_dirShadow.far);
 	light_v = lookAt(m_dirShadow.LightPos, m_dirShadow.LightPos - m_dirShadow.LightDir, vec3(0.0f, 1.0f, 0.0));

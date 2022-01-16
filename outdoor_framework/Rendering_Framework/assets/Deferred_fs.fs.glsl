@@ -37,11 +37,11 @@ float CalcDirShadow(vec3 normal){
     float currentDepth = proj_coord.z;  // depth of current fragment
     
     // acne shadow
-	int dir_flag = 1;
-    if(dir_flag == 1){
-        shadow = currentDepth > closestDepth ? 1.0 : 0.0;
-        return shadow;
-    }
+	// int dir_flag = 1;
+    // if(dir_flag == 1){
+    //     shadow = currentDepth > closestDepth ? 1.0 : 0.0;
+    //     return shadow;
+    // }
 
     // adaptive bias
     // vec3 normal = normalize(vertexData.N);
@@ -70,8 +70,8 @@ vec3 phongShading() {
 
 	// Eye space to tangent space TBN
 	// -1 ~ 1
-	vec3 vs_N = normalize(texelFetch(tex_ws_normal, ivec2(gl_FragCoord.xy), 0).xyz * 2.0 - vec3(1.0)); // out
-	// 	vec3 vs_N = normalize(texelFetch(tex_ws_normal, ivec2(gl_FragCoord.xy), 0).xyz);
+	// vec3 vs_N = normalize(texelFetch(tex_ws_normal, ivec2(gl_FragCoord.xy), 0).xyz * 2.0 - vec3(1.0)); // out
+	vec3 vs_N = normalize(texelFetch(tex_ws_normal, ivec2(gl_FragCoord.xy), 0).xyz);
 
 	// 	vec3 vs_T = normalize(texelFetch(tex_ws_tangent, ivec2(gl_FragCoord.xy), 0).xyz);
 	// 	vec3 vs_B = cross(vs_N, vs_T);
@@ -101,7 +101,7 @@ vec3 phongShading() {
 
 	vec3 fs_R = reflect(-fs_L, fs_N);
 
-	vec3 diffuse_albedo = vec3(2.0) * texture(tex_diffuse, fs_in.texcoord).rgb;
+	vec3 diffuse_albedo = vec3(1.0) * texture(tex_diffuse, fs_in.texcoord).rgb;
 	vec3 diffuse = max(dot(fs_N, fs_L), 0.0) * diffuse_albedo;
 
 	vec3 specular_albedo = texture(tex_specular, fs_in.texcoord).rgb;
@@ -113,12 +113,12 @@ vec3 phongShading() {
 
 	// Shadow
 	float shadow = CalcDirShadow(fs_N);
-	// phongShadow = vec4((vec3(0.1) * ambient + (1.0 - shadow)) *  (vec3(0.8) * diffuse + vec3(0.1) * specular), 1.0f);
+	phongShadow = vec4((vec3(0.1) * ambient + (1.0 - shadow)) *  (vec3(0.8) * diffuse + vec3(0.1) * specular), 1.0f);
 
-	vec3 org_diffuse = texture(tex_diffuse, fs_in.texcoord).rgb;
-	vec3 org_ambient = texture(tex_ambient, fs_in.texcoord).rgb;
-	vec3 org_specular = texture(tex_specular, fs_in.texcoord).rgb;
-	phongShadow = vec4((vec3(0.1) * org_ambient + (1.0 - shadow)) *  (vec3(0.8) * org_diffuse + vec3(0.1) * org_specular), 1.0f);
+	// vec3 org_diffuse = texture(tex_diffuse, fs_in.texcoord).rgb;
+	// vec3 org_ambient = texture(tex_ambient, fs_in.texcoord).rgb;
+	// vec3 org_specular = texture(tex_specular, fs_in.texcoord).rgb;
+	// phongShadow = vec4((vec3(0.1) * org_ambient + (1.0 - shadow)) *  (vec3(0.8) * org_diffuse + vec3(0.1) * org_specular), 1.0f);
 
 
 
@@ -143,7 +143,7 @@ vec3 phongShading() {
 	float attenuation = 50.0f / (pow(dist, 2) + 0.5);
 	// float attenuation = 1.0f /  (pow(dist, 2) + 1.0);
 
-	color += ((diffuse * vec3(0.8) + specular * vec3(0.2)) * attenuation);
+	// color += ((diffuse * vec3(0.8) + specular * vec3(0.2)) * attenuation);
 
 	phongColor = vec4(color, 1.0);
 	return color;

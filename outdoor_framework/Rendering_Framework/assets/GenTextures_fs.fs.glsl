@@ -41,12 +41,12 @@ void main()
 		// ws_normal = vec4((fs_in.TBN * mappedNormal + vec3(1.0f)) / 2, 1.0);
 		// ws_normal = vec4(fs_in.TBN * mappedNormal, 1.0);
 		// ws_normal = vec4(mappedNormal, 1.0);
-		ws_normal = vec4(texture(normalTexture, fs_in.texcoord).rgb, 1.0);
-		// ws_normal = vec4(texture(normalTexture, fs_in.texcoord).rgb * 2.0 - vec3(1.0f), 1.0);
+		// ws_normal = vec4(texture(normalTexture, fs_in.texcoord).rgb, 1.0);
+		ws_normal = vec4(texture(normalTexture, fs_in.texcoord).rgb * 2.0 - vec3(1.0f), 1.0);
 	}
 	else {
-		ws_normal = vec4((fs_in.nm + vec3(1.0)) / 2, 1.0);
-		// ws_normal = vec4(fs_in.nm, 1.0);
+		// ws_normal = vec4((fs_in.nm + vec3(1.0)) / 2, 1.0);
+		ws_normal = vec4(fs_in.nm, 1.0);
 	}
 
 	ws_tangent = vec4(fs_in.tangent, 1.0);
