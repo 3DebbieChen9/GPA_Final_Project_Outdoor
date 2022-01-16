@@ -65,7 +65,8 @@ void main()
 			break;
 		case TEXTURE_WS_POSITION:
 			vec3 ws_position = texelFetch(tex_ws_position, ivec2(gl_FragCoord.xy), 0).rgb;
-			fragColor = vec4(clamp(ws_position, vec3(0.0f), vec3(1.0f)), 1.0f);
+			// fragColor = vec4(clamp(ws_position, vec3(0.0f), vec3(1.0f)), 1.0f);
+			fragColor = vec4(ws_position, 1.0f);
 			break;
 		case TEXTURE_WS_NORMAL:
 			vec3 ws_normal = texelFetch(tex_ws_normal, ivec2(gl_FragCoord.xy), 0).rgb;

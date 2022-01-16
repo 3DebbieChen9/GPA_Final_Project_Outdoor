@@ -150,7 +150,7 @@ void genBloomHDR(vec3 _color) {
 
 void main()
 {
-	vec3 defferdColor = phongShading();
-	genBloomHDR(defferdColor);
-	phongColor = vec4(defferdColor, 1.0f);
+	vec3 deferredColor = phongShading();
+	genBloomHDR(deferredColor);
+	phongColor = vec4(deferredColor, 1.0f);
 }
