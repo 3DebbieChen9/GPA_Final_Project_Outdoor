@@ -63,6 +63,7 @@ vec2 m_oldDistance = vec2(0, 0);
 vec2 m_rotateAngle = vec2(0.0f, 0.0f);
 #pragma endregion
 
+
 // vec3 lightPosition = vec3(0.2f, 0.6f, 0.5f);
 vec3 lightPosition = vec3(636.48, 100.79, 495.98);
 void vsyncEnabled(GLFWwindow *window);
@@ -225,16 +226,10 @@ struct {
 	Shader *shader;
 	GLuint depthFBO;
 	int shadowSize = 2048;
-	float near = 0.0f, far = 1000.0f;
+	float near = 0.0f, far = 500.0f;
 	vec3 LightPos = vec3(636.48, 134.79, 495.98);
 	vec3 LightDir = vec3(0.2, 0.6, 0.5);
 	mat4 LightVP = mat4(1.0f);
-
-	// vec3 dir_light_pos = vec3(-1.14f, 3.0f, 0.77f);
-	// vec3 dir_light = vec3(-2.51449f, 0.477241f, -1.21263f);
-	// // vec3 dir_light = vec3(-2.51449f, -0.477241f, -1.21263f);
-	// float dir_shadow_near=0.0f, dir_shadow_far=10.0f;
-	// mat4 dir_light_vp;
 } m_dirShadow;
 struct {
 	Shader* shader;
@@ -869,7 +864,7 @@ void m_objects_render() {
 	}
 	m_objectShader->disableShader();
 }
-void spherer_render() {
+void m_sphere_render() {
 	m_objectShader->useShader();
 	const GLuint programID = m_objectShader->getProgramID();
 	// Sphere
@@ -898,8 +893,6 @@ void spherer_render() {
 	}
 	m_objectShader->disableShader();
 }
-
-
 
 float window_positions[16] = {
 		 1.0f, -1.0f,  1.0f,  0.0f,
@@ -1000,8 +993,6 @@ void m_window_render() {
 	m_windowFrame.shader->disableShader();
 }
 
-
-
 void genTexture_setBuffer() {
 	glDeleteRenderbuffers(1, &m_genTexture.depthRBO);
 	glDeleteTextures(1, &frameBufferTexture.diffuse);
@@ -1086,7 +1077,6 @@ void genTexture_init() {
 	genTexture_setBuffer();
 }
 
-
 void dirShadow_setBuffer() {
 	glDeleteTextures(1, &frameBufferTexture.dirDepth);
 
@@ -1111,6 +1101,17 @@ void dirShadow_setBuffer() {
 	// // back to default framebuffer
 	// glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+void dirShadow_bindFrameBuffer() {
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	static const GLfloat blue[] = { 0.0f, 0.0f, 0.5f, 1.0f };
+	static const GLfloat one = 1.0f;
+
+	glClearBufferfv(GL_COLOR, 0, blue);
+	glClearBufferfv(GL_DEPTH, 0, &one);
+}
 void dirShadow_init() {
 	// depth FBO
 	glGenFramebuffers(1, &m_dirShadow.depthFBO);
@@ -1124,18 +1125,6 @@ void dirShadow_init() {
 	glUniformMatrix4fv(glGetUniformLocation(programID, "light_vp"), 1, GL_FALSE, value_ptr(m_dirShadow.LightVP));
 	glUniformMatrix4fv(glGetUniformLocation(programID, "um4m"), 1, GL_FALSE, value_ptr(mat4(1.0f)));
 	m_dirShadow.shader->disableShader();
-	
-}
-void dirShadow_bindFrameBuffer() {
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	static const GLfloat blue[] = { 0.0f, 0.0f, 0.5f, 1.0f };
-	static const GLfloat one = 1.0f;
-
-	glClearBufferfv(GL_COLOR, 0, blue);
-	glClearBufferfv(GL_DEPTH, 0, &one);
 }
 void dirShadow_render() {	
 
@@ -1161,9 +1150,6 @@ void dirShadow_render() {
 	// glDisable(GL_DEPTH_TEST);
 	// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
-
-
-
 
 void deferred_setBuffer() {
 	glDeleteRenderbuffers(1, &m_deferred.depthRBO);
@@ -1318,8 +1304,6 @@ int main() {
 		return -1;
 	}
 
-
-
 	glfwSetKeyCallback(window, keyCallback);
 	glfwSetScrollCallback(window, mouseScrollCallback);
 	glfwSetMouseButtonCallback(window, mouseButtonCallback);
@@ -1453,7 +1437,7 @@ void paintGL() {
 	// shader set flag 0
 	m_objects_render();
 	// shader set flag 1
-	spherer_render();
+	m_sphere_render();
 	// light pass: shadow
 	dirShadow_bindFrameBuffer();
 	dirShadow_render(); // shadow map
@@ -1547,6 +1531,7 @@ void cursorPosCallback(GLFWwindow* window, double x, double y) {
 	}
 #pragma endregion
 }
+
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (GLFW_PRESS == action) {
 		switch (key)
@@ -1561,9 +1546,20 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 			cout << "Current eye at (" << m_eye[0] << ", " << m_eye[1] << ", " << m_eye[2] << ")" << endl;
 			break;
 		case GLFW_KEY_C:
+			cout << "before m_eye" << m_eye[0] << " " << m_eye[1] << " " << m_eye[2] << endl;
+			cout << "before m_lookAtCenter" << m_lookAtCenter[0] << " " << m_lookAtCenter[1] << " " << m_lookAtCenter[2] << endl;
+			vec3 tmpCenter = vec3(0.0f);
 			cout << endl << "Input look-at center (split with space): " << endl;
-			scanf("%f %f %f", &m_lookAtCenter[0], &m_lookAtCenter[1], &m_lookAtCenter[2]);
-			cout << endl << "Current look-at center at (" << m_lookAtCenter[0] << ", " << m_lookAtCenter[1] << ", " << m_lookAtCenter[2] << ")" << endl;
+			scanf("%f %f %f", &tmpCenter[0], &tmpCenter[1], &tmpCenter[2]);
+			cout << endl << "Current look-at center at (" << tmpCenter[0] << ", " << tmpCenter[1] << ", " << tmpCenter[2] << ")" << endl;
+			m_lookDirection = tmpCenter - m_eye;
+			// scanf("%f %f %f", &m_lookAtCenter[0], &m_lookAtCenter[1], &m_lookAtCenter[2]);
+			// cout << endl << "Current look-at center at (" << m_lookAtCenter[0] << ", " << m_lookAtCenter[1] << ", " << m_lookAtCenter[2] << ")" << endl;
+			break;
+		case GLFW_KEY_V:
+			cout << "after m_eye" << m_eye[0] << " " << m_eye[1] << " " << m_eye[2] << endl;
+			cout << "after m_lookAtCenter" << m_lookAtCenter[0] << " " << m_lookAtCenter[1] << " " << m_lookAtCenter[2] << endl;
+			cout << "plane pos" << m_airplanePosition[0] << " " << m_airplanePosition[1] << " " << m_airplanePosition[2] << endl;
 			break;
 		case GLFW_KEY_1:
 			CURRENT_TEX = TEXTURE_FINAL;

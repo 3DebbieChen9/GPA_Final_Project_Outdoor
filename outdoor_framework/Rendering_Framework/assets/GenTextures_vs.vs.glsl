@@ -28,7 +28,8 @@ uniform vec3 uv3Specular;
 
 void main() {
 	gl_Position = um4p * um4v * um4m * vec4(iv3position, 1.0);
-	vs_out.nm = mat3(um4m) * iv3normal;
+	// vs_out.nm = mat3(um4m) * iv3normal;
+	vs_out.nm = mat3(transpose(inverse(um4m))) * iv3normal;
 	vs_out.ps = (um4m * vec4(iv3position, 1.0)).xyz;
 	vs_out.N = iv3normal;
 	vs_out.FragPos = vec3(um4m * vec4(iv3position, 1.0));
