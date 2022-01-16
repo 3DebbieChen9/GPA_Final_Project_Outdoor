@@ -123,29 +123,29 @@ vec3 phongShading() {
 
 
 	// Point Light
-	// vec3 pointLightPos = vec3(636.48, 134.79, 495.98);
-	// vec3 point_L = pointLightPos - vs_P.xyz;
-	// // lightDir = normalize(vec3(dot(point_L, vs_T), dot(point_L, vs_B), dot(point_L, vs_N)));
-	// lightDir = point_L;
-	// fs_L = normalize(lightDir);
-	// fs_R = reflect(-fs_L, fs_N);
+	vec3 pointLightPos = vec3(636.48, 134.79, 495.98);
+	vec3 point_L = pointLightPos - vs_P.xyz;
+	// lightDir = normalize(vec3(dot(point_L, vs_T), dot(point_L, vs_B), dot(point_L, vs_N)));
+	lightDir = point_L;
+	fs_L = normalize(lightDir);
+	fs_R = reflect(-fs_L, fs_N);
 
-	// diffuse = max(dot(fs_N, fs_L), 0.0) * diffuse_albedo;
-	// specular = max(pow(dot(fs_R, fs_V), 900.0), 0.0) * specular_albedo;
+	diffuse = max(dot(fs_N, fs_L), 0.0) * diffuse_albedo;
+	specular = max(pow(dot(fs_R, fs_V), 900.0), 0.0) * specular_albedo;
 
-	// float dist = distance(pointLightPos, vs_P.xyz);
+	float dist = distance(pointLightPos, vs_P.xyz);
 	
-	// // Bloom Sphere
-	// if(dist <= 2.0f) {
-	// 	color = vec3(1.0f) * vec3(0.7f) + diffuse * vec3(0.3);
-	// 	phongShadow = vec4(vec3(1.0f) * vec3(0.7f) + diffuse * vec3(0.3), 1.0f);
-	// }
-	// float attenuation = 50.0f / (pow(dist, 2) + 0.5);
-	// // float attenuation = 1.0f /  (pow(dist, 2) + 1.0);
+	// Bloom Sphere
+	if(dist <= 2.0f) {
+		color = vec3(1.0f) * vec3(0.7f) + diffuse * vec3(0.3);
+		phongShadow = vec4(vec3(1.0f) * vec3(0.7f) + diffuse * vec3(0.3), 1.0f);
+	}
+	float attenuation = 50.0f / (pow(dist, 2) + 0.5);
+	// float attenuation = 1.0f /  (pow(dist, 2) + 1.0);
 
-	// color += ((diffuse * vec3(0.8) + specular * vec3(0.2)) * attenuation);
+	color += ((diffuse * vec3(0.8) + specular * vec3(0.2)) * attenuation);
 
-	// phongColor = vec4(color, 1.0);
+	phongColor = vec4(color, 1.0);
 	return color;
 }
 
