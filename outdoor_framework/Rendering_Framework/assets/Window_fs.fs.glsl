@@ -29,7 +29,7 @@ uniform sampler2D tex_phong;
 uniform sampler2D tex_bloomHDR;
 
 void genBloom() {
-	int half_size = 2;
+	int half_size = 4; // blur factor
 	vec4 color_sum = vec4(0);
 
 	for (int i = -half_size; i <= half_size; ++i) {
@@ -41,7 +41,8 @@ void genBloom() {
 	int sample_count = (half_size * 2 + 1) * (half_size * 2 + 1);
 	vec4 color = color_sum / sample_count;
 	vec3 originalColor = texture(tex_phong, fs_in.texcoord).rgb;
-	fragColor = vec4((originalColor * vec3(0.2) + color.xyz * vec3(0.8)), 1.0f);
+	// fragColor = vec4((originalColor * vec3(0.2) + color.xyz * vec3(0.8)), 1.0f);
+	fragColor = vec4((originalColor + color.xyz), 1.0f);
 }
 
 void main()

@@ -762,31 +762,6 @@ void m_objects_render() {
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
-
-	// Sphere
-	glUniform1i(glGetUniformLocation(programID, "ubHasNormalMap"), (m_sphere.hasNormalMap) ? 1 : 0);
-	glUniform1i(glGetUniformLocation(programID, "ubUseNormalMap"), (m_sphere.useNormalMap) ? 1 : 0);
-	glUniformMatrix4fv(glGetUniformLocation(programID, "um4m"), 1, GL_FALSE, value_ptr(m_sphere.model));
-	for (int i = 0; i < m_sphere.shapes.size(); i++) {
-		int materialID = m_sphere.shapes[i].materialID;
-		glUniform3fv(glGetUniformLocation(programID, "uv3Ambient"), 1, value_ptr(vec3(1.0f)));
-		glUniform3fv(glGetUniformLocation(programID, "uv3Specular"), 1, value_ptr(vec3(1.0f)));
-		glUniform3fv(glGetUniformLocation(programID, "uv3Diffuse"), 1, value_ptr(vec3(1.0f)));
-
-		glBindVertexArray(m_sphere.shapes[i].vao);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_sphere.shapes[i].ibo);
-
-		glUniform1i(glGetUniformLocation(programID, "diffuseTexture"), 3);
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, m_sphere.whiteTexture);
-		glUniform1i(glGetUniformLocation(programID, "normalTexture"), 4);
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, m_sphere.whiteTexture);
-
-		glDrawElements(GL_TRIANGLES, m_sphere.shapes[i].drawCount, GL_UNSIGNED_INT, 0);
-		glBindVertexArray(0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-	}
 	m_objectShader->disableShader();
 }
 void spherer_render() {
@@ -1106,6 +1081,7 @@ void deferred_render() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	m_deferred.shader->useShader();
+
 	const GLuint programID = m_deferred.shader->getProgramID();
 	glUniform3fv(glGetUniformLocation(programID, "uv3LightPos"), 1, value_ptr(lightPosition));
 	glUniform3fv(glGetUniformLocation(programID, "uv3eyePos"), 1, value_ptr(m_eye));
@@ -1294,9 +1270,15 @@ void paintGL() {
 	// [TODO] implement your rendering function here
 	m_objects_render();
 	
+	
+	// geometry pass: pos, normal
 	deferred_bindFrameBuffer();
-	// spherer_render();
+
+	// light pass: shadow
+	//Calshadow(); //-> shadowmap: depth map
+	
 	deferred_render();
+	spherer_render();
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	m_window_render();

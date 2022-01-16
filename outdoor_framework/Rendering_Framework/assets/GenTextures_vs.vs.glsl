@@ -38,9 +38,9 @@ void main() {
 	vs_out.specular_color = uv3Specular;
 	vs_out.ambient_color = uv3Ambient;
 
-	vec3 T = normalize(vec3(um4m * vec4(iv3tangent,   0.0)));
-	vec3 N = normalize(vec3(um4m * vec4(iv3normal,  0.0)));
-	vec3 B = normalize(vec3(um4m * vec4(iv3bittangent, 0.0)));
+	vec3 T = normalize(vec3(um4m * vec4(iv3tangent,   1.0)));
+	vec3 N = normalize(vec3(um4m * vec4(iv3normal,  1.0)));
+	vec3 B = normalize(vec3(um4m * vec4(iv3bittangent, 1.0)));
 	vs_out.TBN = mat3(T,B,N);
 
 }
