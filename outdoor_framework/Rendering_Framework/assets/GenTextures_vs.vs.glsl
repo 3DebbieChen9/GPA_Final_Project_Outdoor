@@ -4,6 +4,7 @@ layout(location = 0) in vec3 iv3position;
 layout(location = 1) in vec2 iv2tex_coord;
 layout(location = 2) in vec3 iv3normal;
 layout(location = 3) in vec3 iv3tangent;
+layout(location = 4) in vec3 iv3bittangent;
 
 out VS_OUT{
 	vec3 N; // model space normal
@@ -15,6 +16,7 @@ out VS_OUT{
 	vec3 specular_color;
 	vec3 diffuse_color; // diffuse color from mtl
 	vec3 tangent;
+	mat3 TBN;
 } vs_out;
 
 uniform mat4 um4m;
@@ -35,6 +37,12 @@ void main() {
 	vs_out.diffuse_color = uv3Diffuse;
 	vs_out.specular_color = uv3Specular;
 	vs_out.ambient_color = uv3Ambient;
+
+	vec3 T = normalize(vec3(um4m * vec4(iv3tangent,   0.0)));
+	vec3 N = normalize(vec3(um4m * vec4(iv3normal,  0.0)));
+	vec3 B = normalize(vec3(um4m * vec4(iv3bittangent, 0.0)));
+	vs_out.TBN = mat3(T,B,N);
+
 }
 
 

@@ -17,6 +17,7 @@ in VS_OUT{
 	vec3 specular_color;
 	vec3 diffuse_color; // diffuse color from mtl
 	vec3 tangent;
+	mat3 TBN;
 } fs_in;
 
 uniform sampler2D diffuseTexture;
@@ -34,19 +35,18 @@ void main()
 	ambient_color = vec4(fs_in.ambient_color, 1.0);
 	specular_color = vec4(fs_in.specular_color, 1.0);
 	ws_position = vec4(fs_in.ps, 1.0);
-	if (ubHasNormalMap) {
-		if (ubUseNormalMap) {
-			ws_normal = vec4(texture(normalTexture, fs_in.texcoord).rgb, 1.0);
-		}
-		else {
-			ws_normal = vec4(fs_in.nm / 2 + 1.0, 1.0);
-			// ws_normal = vec4(clamp(fs_in.nm / 2 + 1.0, vec3(0.0), vec3(1.0)), 1.0);
-		}
+	if(ubUseNormalMap) {
+		vec3 mappedNormal = texture(normalTexture, fs_in.texcoord).rgb * 2.0 - vec3(1.0f);
+		// ws_normal = vec4((fs_in.TBN * mappedNormal + vec3(1.0f)) / 2, 1.0);
+		ws_normal = vec4(fs_in.TBN * mappedNormal, 1.0);
+		// ws_normal = vec4(texture(normalTexture, fs_in.texcoord).rgb, 1.0);
+		// ws_normal = vec4(texture(normalTexture, fs_in.texcoord).rgb * 2.0 - vec3(1.0f), 1.0);
 	}
 	else {
-		ws_normal = vec4(fs_in.nm / 2 + 1.0, 1.0);
-		// ws_normal = vec4(clamp(fs_in.nm / 2 + 1.0, vec3(0.0), vec3(1.0)), 1.0);
+		ws_normal = vec4((fs_in.nm + vec3(1.0)) / 2, 1.0);
+		// ws_normal = vec4(fs_in.nm, 1.0);
 	}
+
 	ws_tangent = vec4(fs_in.tangent, 1.0);
 	// ws_tangent = vec4(clamp(fs_in.tangent, vec3(0.0), vec3(1.0)), 1.0);
 	
